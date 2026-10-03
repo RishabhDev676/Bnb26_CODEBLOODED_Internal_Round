@@ -3,10 +3,11 @@ import { CodeEditor } from '../components/CodeEditor';
 import { AIAssistantPanel } from '../components/AIAssistantPanel';
 import { LearnerAnalytics } from '../components/LearnerAnalytics';
 import { ModelEvaluationModal } from '../components/ModelEvaluationModal';
+import { InstitutionalDashboard } from '../components/InstitutionalDashboard';
 import { supabase } from '../lib/supabase';
 import { 
   Play, Key, AlertTriangle, Activity, Code2, Image, 
-  X, Cpu, Layers, Sparkles, ChevronRight, HelpCircle
+  X, Cpu, Layers, Sparkles, ChevronRight, HelpCircle, GraduationCap
 } from 'lucide-react';
 import { diagnoseWithGemini, geminiKeyManager } from '../services/geminiService';
 import { CHALLENGES_CATALOG } from '../data/misconceptionsDataset';
@@ -20,6 +21,7 @@ export const LearningModule: React.FC = () => {
   const [attempts, setAttempts] = useState<Attempt[]>([]);
   const [showAnalytics, setShowAnalytics] = useState(false);
   const [showEvaluation, setShowEvaluation] = useState(false);
+  const [showInstructor, setShowInstructor] = useState(false);
   const [rotationMessage, setRotationMessage] = useState<string | null>(null);
 
   // Multimodal image attachment state
@@ -265,6 +267,15 @@ export const LearningModule: React.FC = () => {
             <Activity className="w-4 h-4 text-indigo-400" />
             <span>Learner Model</span>
           </button>
+
+          {/* Institutional / Instructor Dashboard Button */}
+          <button
+            onClick={() => setShowInstructor(true)}
+            className="flex items-center gap-1.5 bg-purple-950/60 hover:bg-purple-900/80 text-purple-300 border border-purple-800/60 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all shadow-sm cursor-pointer"
+          >
+            <GraduationCap className="w-4 h-4 text-purple-400" />
+            <span>Instructor View</span>
+          </button>
         </div>
       </header>
 
@@ -482,6 +493,11 @@ export const LearningModule: React.FC = () => {
       {/* Model Evaluation Benchmark Modal */}
       {showEvaluation && (
         <ModelEvaluationModal onClose={() => setShowEvaluation(false)} />
+      )}
+
+      {/* Institutional & Instructor Dashboard Modal */}
+      {showInstructor && (
+        <InstitutionalDashboard onClose={() => setShowInstructor(false)} />
       )}
     </div>
   );

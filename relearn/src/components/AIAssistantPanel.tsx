@@ -1,6 +1,6 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AlertCircle, CheckCircle2, Lightbulb, Bot, Terminal, Code2 } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Lightbulb, Bot, Terminal, Code2, Volume2, VolumeX } from 'lucide-react';
 import type { Attempt } from '../types';
 
 interface AIAssistantPanelProps {
@@ -15,6 +15,35 @@ export const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
   onNextChallenge
 }) => {
   const bottomRef = useRef<HTMLDivElement>(null);
+  const [speakingId, setSpeakingId] = useState<string | null>(null);
+
+  const toggleSpeech = (attemptId: string, textToSpeak: string) => {
+    if (!('speechSynthesis' in window)) return;
+
+    if (speakingId === attemptId) {
+      window.speechSynthesis.cancel();
+      setSpeakingId(null);
+      return;
+    }
+
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(textToSpeak);
+    utterance.rate = 1.0;
+    utterance.pitch = 1.0;
+    utterance.onend = () => setSpeakingId(null);
+    utterance.onerror = () => setSpeakingId(null);
+
+    setSpeakingId(attemptId);
+    window.speechSynthesis.speak(utterance);
+  };
+
+  useEffect(() => {
+    return () => {
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, []);
 
   // Auto-scroll to bottom when new attempt comes in
   useEffect(() => {
@@ -109,9 +138,33 @@ export const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
                     </div>
                   ) : (
                     <div className="text-gray-200 space-y-4">
-                      <div className="flex items-center gap-2 text-red-400 font-semibold border-b border-red-900/30 pb-2">
-                        <AlertCircle className="w-5 h-5" />
-                        Identified Misconception
+                      <div className="flex items-center justify-between border-b border-red-900/30 pb-2">
+                        <div className="flex items-center gap-2 text-red-400 font-semibold">
+                          <AlertCircle className="w-5 h-5" />
+                          <span>Identified Misconception</span>
+                        </div>
+                        {attempt.diagnosis.intervention && (
+                          <button
+                            onClick={() => toggleSpeech(
+                              attempt.id,
+                              `${attempt.diagnosis?.explanation}. Hint: ${attempt.diagnosis?.intervention}`
+                            )}
+                            className="flex items-center gap-1.5 text-xs bg-blue-950/60 hover:bg-blue-900/80 text-blue-300 border border-blue-800/60 px-2.5 py-1 rounded-md transition-colors cursor-pointer"
+                            title="Listen to Voice Pedagogue Explanation"
+                          >
+                            {speakingId === attempt.id ? (
+                              <>
+                                <VolumeX className="w-3.5 h-3.5 text-red-400 animate-pulse" />
+                                <span>Stop Voice</span>
+                              </>
+                            ) : (
+                              <>
+                                <Volume2 className="w-3.5 h-3.5 text-cyan-400" />
+                                <span>Listen (TTS)</span>
+                              </>
+                            )}
+                          </button>
+                        )}
                       </div>
                       
                       {attempt.diagnosis.misconception && (
