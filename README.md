@@ -139,6 +139,31 @@ Visit `http://localhost:5173` in your browser.
 
 ---
 
+## 🗺️ Project Plan & Roadmap
+
+### Phase 1: Foundation (✅ Completed)
+- [x] Initial React, Vite, and Tailwind CSS architecture.
+- [x] Supabase PostgreSQL database schema (Profiles, Misconceptions, Attempts).
+- [x] `@monaco-editor/react` integration for a native coding experience.
+
+### Phase 2: Intelligence & Pedagogy (✅ Completed)
+- [x] Google Gemini & Groq AI integration with strictly enforced JSON schemas.
+- [x] **Multi-Key Resilience Engine**: Auto-cycling between API keys on quota exhaustion.
+- [x] Socratic diagnostic logic (differentiating syntax errors from mental model errors).
+
+### Phase 3: Analytics & Adaptive UI (✅ Completed)
+- [x] **Framer Motion Timeline**: Interactive chat-like assistant panel for active feedback.
+- [x] **Learner Model Dashboard**: Recharts-powered radar & bar charts displaying concept mastery and recurring bottlenecks.
+- [x] Adaptive Resolution Challenge loop to verify mastery.
+
+### Phase 4: Hackathon Stretch Goals (🚀 Next Steps)
+- [ ] **Expanded Dataset**: Populate the `misconceptions` database with hundreds of known cognitive traps in Python, Algebra, and Physics.
+- [ ] **Multimodal Inputs**: Allow image uploads for handwritten working steps in Algebra/Physics, evaluated via Gemini 1.5 Pro Vision.
+- [ ] **Model Evaluation Metrics**: Run accuracy benchmarks against a holdout set of beginner mistakes to quantify diagnostic precision.
+
+---
+
+
 ## 👥 Authors & Acknowledgments
 
 * **Rishabh Dev** ([@RishabhDev676](https://github.com/RishabhDev676))
