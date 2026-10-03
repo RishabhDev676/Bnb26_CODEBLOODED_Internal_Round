@@ -109,6 +109,27 @@ That's it! You can now test the interactive Code Editor, Multimodal Image upload
 
 > **💡 Note on Database (Optional)**: If you wish to persist learner attempts to a database, you can connect a Supabase project by adding `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` to your `.env` and pushing the schema located in `supabase/seed.sql`.
 
+### 5. Troubleshooting `npm install`
+If you encounter errors during installation:
+
+* **Peer Dependency Conflicts (React 19)**:
+  ```bash
+  npm install --legacy-peer-deps
+  ```
+* **Windows Execution Policy Error** (`running scripts is disabled`):
+  ```powershell
+  Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+  ```
+  Or run directly with `cmd.exe`:
+  ```cmd
+  cmd.exe /c "npm install && npm run dev"
+  ```
+* **Clean Cache & Reinstall**:
+  ```bash
+  npm cache clean --force
+  npm install --legacy-peer-deps
+  ```
+
 ---
 
 ## 🗄️ Database Architecture
