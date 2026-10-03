@@ -139,31 +139,73 @@ Visit `http://localhost:5173` in your browser.
 
 ---
 
-## 🗺️ Project Plan & Roadmap
+## 🏗️ System Architecture & Workflow
 
-### Phase 1: Foundation (✅ Completed)
-- [x] Initial React, Vite, and Tailwind CSS architecture.
-- [x] Supabase PostgreSQL database schema (Profiles, Misconceptions, Attempts).
-- [x] `@monaco-editor/react` integration for a native coding experience.
+Re:Learn shifts the paradigm from **binary grading (Pass/Fail)** to **semantic mental model diagnosis**. 
 
-### Phase 2: Intelligence & Pedagogy (✅ Completed)
-- [x] Google Gemini & Groq AI integration with strictly enforced JSON schemas.
-- [x] **Multi-Key Resilience Engine**: Auto-cycling between API keys on quota exhaustion.
-- [x] Socratic diagnostic logic (differentiating syntax errors from mental model errors).
-
-### Phase 3: Analytics & Adaptive UI (✅ Completed)
-- [x] **Framer Motion Timeline**: Interactive chat-like assistant panel for active feedback.
-- [x] **Learner Model Dashboard**: Recharts-powered radar & bar charts displaying concept mastery and recurring bottlenecks.
-- [x] Adaptive Resolution Challenge loop to verify mastery.
-
-### Phase 4: Hackathon Advanced Deliverables (✅ Completed)
-- [x] **Expanded Dataset**: Pre-populated dictionary & SQL seed (`seed.sql`) of known cognitive traps across Python, JavaScript, Algebra, and Physics.
-- [x] **Multimodal Inputs**: Enabled image upload for handwritten calculations and diagrams, analyzed jointly with code via Gemini 1.5 Flash Vision.
-- [x] **Model Evaluation Benchmark Suite**: Built-in interactive benchmark evaluator testing diagnostic accuracy and differentiation across Seen vs Unseen misconceptions.
+```mermaid
+flowchart TD
+    A[Student Submits Code / Uploads Math Diagram] --> B{Routing Layer}
+    B -->|API Keys Available| C(Frontend Multi-Key Cycling Engine)
+    B -->|Frontend Quota Exhausted| D(Supabase Edge Function / Groq)
+    
+    C --> E[LLM Vision & Text Inference]
+    D --> E
+    
+    E --> F{Is Logic Correct?}
+    F -->|Yes| G[Proceed to Next Concept]
+    F -->|No| H[Identify Cognitive Misconception]
+    
+    H --> I[Generate Socratic Intervention]
+    I --> J[Store in 'attempts' DB to update Learner Model]
+    J --> K[Present Adaptive Resolution Challenge]
+    K --> A
+```
 
 ---
 
+## 🗺️ Project Plan & Detailed Roadmap
 
+### Phase 1: Foundation (✅ Completed)
+- [x] Initial React, Vite, and Tailwind CSS v4 architecture setup.
+- [x] Supabase PostgreSQL database schema (`profiles`, `misconceptions`, `attempts`).
+- [x] VS Code-style native coding experience via `@monaco-editor/react`.
+
+### Phase 2: Intelligence & Pedagogy (✅ Completed)
+- [x] Strictly enforced JSON-schema prompting for structured pedagogical output.
+- [x] **Multi-Key Resilience Engine**: Auto-cycling between API keys on quota exhaustion or HTTP 429 rate limits, with built-in cooldowns.
+- [x] Socratic diagnostic logic designed to differentiate syntax errors from genuine mental model misunderstandings.
+
+### Phase 3: Analytics & Adaptive UI (✅ Completed)
+- [x] **Framer Motion AI Timeline**: Interactive, buttery-smooth chat-like assistant panel for active feedback.
+- [x] **Learner Model Dashboard**: Recharts-powered radar & bar charts displaying real-time concept mastery and recurring bottlenecks.
+- [x] **Adaptive Resolution Assessment**: Automated transition to follow-up challenges to scientifically verify concept mastery.
+
+### Phase 4: Hackathon Advanced Deliverables (✅ Completed)
+- [x] **Expanded Dataset**: Built a comprehensive internal dataset and SQL seed (`seed.sql`) of known cognitive traps across Programming, Algebra, and Physics.
+- [x] **Multimodal Image Inputs**: Enabled image upload for handwritten calculations and free-body diagrams, analyzed jointly with text via Gemini Vision models.
+- [x] **Interactive Model Evaluation Suite**: Built a dedicated Model Benchmark modal to test diagnostic accuracy and misconception differentiation across *Seen* vs *Unseen* traps.
+
+### Phase 5: Enterprise Scaling & Future Vision (🚀 Post-Hackathon)
+- [ ] **LMS Integration (LTI 1.3)**: Plug-and-play integration with Canvas, Moodle, and Blackboard so universities can adopt the tool instantly.
+- [ ] **Voice-Interactive Pedagogue**: Integrate WebRTC real-time voice streaming so the AI can physically "talk" the student through their frustration in real-time.
+- [ ] **Institutional Dashboard**: Aggregated heatmaps for professors to see which concepts the *entire class* is failing on simultaneously, allowing them to adjust the next day's lecture.
+- [ ] **Open-Source Fine-Tuning**: Fine-tune smaller, cheaper local models (like Llama 3 8B) on the collected dataset of student misconceptions to reduce API costs to zero.
+
+---
+
+## ✅ Hackathon Criteria Mapping
+
+| Hackathon Requirement | How Re:Learn Solves It |
+|---|---|
+| **Identify Misconception** | Uses structured JSON prompting to identify the specific trap (e.g. `Freshman's Dream`, `Off-by-One`) rather than a simple "incorrect". |
+| **Differentiate Misconceptions** | Evaluation Benchmark proves the system can distinguish between subtle similar errors (e.g., assignment `=` vs loose equality `==`). |
+| **Adaptive Intervention** | Generates a specific, Socratic hint targeting the mental model without giving away the answer. |
+| **Resolution Assessment** | `resolutionChallengeId` triggers a modified follow-up problem to verify the trap was overcome. |
+| **Learner Model** | Supabase tracks all attempts, feeding a Recharts UI showing Mastery vs Recurring Traps over time. |
+| **Model Evaluation** | Built-in UI benchmark suite tests accuracy on *unseen* responses in real-time. |
+
+---
 
 ## 👥 Authors & Acknowledgments
 
