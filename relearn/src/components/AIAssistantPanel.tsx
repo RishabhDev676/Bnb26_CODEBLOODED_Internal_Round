@@ -122,10 +122,10 @@ export const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
                     <div className="text-emerald-100">
                       <div className="flex items-center gap-2 mb-3 text-emerald-400 font-semibold">
                         <CheckCircle2 className="w-5 h-5" />
-                        Resolution Confirmed!
+                        {attempt.diagnosis.explanation?.includes('Resolution') ? 'Misconception Resolved!' : 'Correct Solution!'}
                       </div>
                       <p className="mb-4 text-emerald-200/90 leading-relaxed">
-                        Your code logic is perfectly sound. You've demonstrated a clear understanding of the concept!
+                        {attempt.diagnosis.explanation || "Your code logic is perfectly sound. You've demonstrated a clear understanding of the concept!"}
                       </p>
                       {onNextChallenge && idx === attempts.length - 1 && (
                         <button 
@@ -167,16 +167,22 @@ export const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
                         )}
                       </div>
                       
-                      {attempt.diagnosis.misconception && (
+                      {attempt.diagnosis.misconception ? (
                         <div className="bg-red-900/20 px-3 py-2 rounded-lg border border-red-800/30 inline-block">
                           <span className="text-red-300 font-medium text-sm">
                             {attempt.diagnosis.misconception}
                           </span>
                         </div>
+                      ) : (
+                        <div className="bg-red-900/20 px-3 py-2 rounded-lg border border-red-800/30 inline-block">
+                          <span className="text-red-300 font-medium text-sm">
+                            Logical Misconception Detected
+                          </span>
+                        </div>
                       )}
 
                       <div className="text-gray-300 text-sm leading-relaxed">
-                        {attempt.diagnosis.explanation}
+                        {attempt.diagnosis.explanation || "The model identified that the logic does not satisfy the problem criteria. Review your condition and return values."}
                       </div>
 
                       {attempt.diagnosis.intervention && (

@@ -23,10 +23,21 @@ class GeminiKeyManager {
       rawKeys.push(...commaSeparated.split(',').map((k: string) => k.trim()).filter(Boolean));
     }
 
-    // 2. Check numbered keys: VITE_GEMINI_API_KEY_1, VITE_GEMINI_API_KEY_2, etc.
-    for (let i = 1; i <= 10; i++) {
-      const key = import.meta.env[`VITE_GEMINI_API_KEY_${i}`];
-      if (key && !rawKeys.includes(key.trim())) {
+    // 2. Check numbered keys: VITE_GEMINI_API_KEY_1, VITE_GEMINI_API_KEY_2, etc. (explicit references for Vite static inlining)
+    const explicitKeys = [
+      import.meta.env.VITE_GEMINI_API_KEY_1,
+      import.meta.env.VITE_GEMINI_API_KEY_2,
+      import.meta.env.VITE_GEMINI_API_KEY_3,
+      import.meta.env.VITE_GEMINI_API_KEY_4,
+      import.meta.env.VITE_GEMINI_API_KEY_5,
+      import.meta.env.VITE_GEMINI_API_KEY_6,
+      import.meta.env.VITE_GEMINI_API_KEY_7,
+      import.meta.env.VITE_GEMINI_API_KEY_8,
+      import.meta.env.VITE_GEMINI_API_KEY_9,
+      import.meta.env.VITE_GEMINI_API_KEY_10,
+    ];
+    for (const key of explicitKeys) {
+      if (key && typeof key === 'string' && !rawKeys.includes(key.trim())) {
         rawKeys.push(key.trim());
       }
     }
@@ -179,21 +190,42 @@ Output ONLY valid JSON matching this schema:
       });
     }
 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+    const models = ["gemini-1.5-flash", "gemini-2.0-flash", "gemini-2.5-flash"];
+    let response: Response | null = null;
+    let lastError: any = null;
 
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        contents: [{ parts }],
-        generationConfig: {
-          temperature: 0.1,
-          responseMimeType: "application/json",
-        },
-      }),
-    });
+    for (const modelName of models) {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+      try {
+        const res = await fetch(url, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            contents: [{ parts }],
+            generationConfig: {
+              temperature: 0.1,
+              responseMimeType: "application/json",
+            },
+          }),
+        });
+
+        if (res.status === 404) {
+          // Model not supported in this region/key, try next candidate
+          continue;
+        }
+
+        response = res;
+        break;
+      } catch (e) {
+        lastError = e;
+      }
+    }
+
+    if (!response) {
+      throw lastError || new Error("Failed to reach Gemini API endpoints.");
+    }
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
