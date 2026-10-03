@@ -39,24 +39,24 @@ export const WelcomeSplash: React.FC<WelcomeSplashProps> = ({ onStart }) => {
         
         <p className="text-xl md:text-2xl text-gray-300 font-light mb-8 max-w-2xl leading-relaxed">
           Traditional auto-graders tell you <span className="font-semibold text-red-400">what</span> failed.<br/>
-          We diagnose the cognitive misconception to tell you <span className="font-semibold text-emerald-400">why</span>.
+          We figure out the exact mistake in your thinking to tell you <span className="font-semibold text-emerald-400">why</span>.
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-12 w-full max-w-3xl">
           <div className="bg-white/5 border border-white/10 p-4 rounded-2xl flex flex-col items-center gap-2 backdrop-blur-sm">
             <Code2 className="w-6 h-6 text-blue-400" />
-            <h3 className="text-sm font-semibold text-gray-200">Semantic Analysis</h3>
-            <p className="text-[11px] text-gray-400 text-center">Moving beyond syntax errors to understand mental models.</p>
+            <h3 className="text-sm font-semibold text-gray-200">Deep Understanding</h3>
+            <p className="text-[11px] text-gray-400 text-center">Looking past simple typos to understand how you think.</p>
           </div>
           <div className="bg-white/5 border border-white/10 p-4 rounded-2xl flex flex-col items-center gap-2 backdrop-blur-sm">
             <Sparkles className="w-6 h-6 text-purple-400" />
-            <h3 className="text-sm font-semibold text-gray-200">Socratic Pedagogy</h3>
-            <p className="text-[11px] text-gray-400 text-center">Guiding students to the answer without revealing it.</p>
+            <h3 className="text-sm font-semibold text-gray-200">Smart Hints</h3>
+            <p className="text-[11px] text-gray-400 text-center">Helping you find the answer without just giving it away.</p>
           </div>
           <div className="bg-white/5 border border-white/10 p-4 rounded-2xl flex flex-col items-center gap-2 backdrop-blur-sm">
             <BrainCircuit className="w-6 h-6 text-emerald-400" />
-            <h3 className="text-sm font-semibold text-gray-200">Multimodal Telemetry</h3>
-            <p className="text-[11px] text-gray-400 text-center">Analyze code & handwritten diagrams simultaneously.</p>
+            <h3 className="text-sm font-semibold text-gray-200">Visual & Text AI</h3>
+            <p className="text-[11px] text-gray-400 text-center">Reads your code, math, and handwritten notes all at once.</p>
           </div>
         </div>
 
@@ -68,8 +68,9 @@ export const WelcomeSplash: React.FC<WelcomeSplashProps> = ({ onStart }) => {
         >
           <div className="absolute inset-0 bg-gradient-to-r from-blue-100 via-white to-purple-100 opacity-0 group-hover:opacity-100 transition-opacity"></div>
           <span className="relative flex items-center gap-3">
-            Initialize Cognitive Engine
+            Start Learning Engine
             <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+
           </span>
         </motion.button>
       </motion.div>
