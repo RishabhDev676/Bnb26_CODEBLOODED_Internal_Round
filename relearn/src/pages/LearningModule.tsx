@@ -1,32 +1,52 @@
 import React, { useState, useEffect } from 'react';
 import { CodeEditor } from '../components/CodeEditor';
-import { InterventionPanel, type Diagnosis } from '../components/InterventionPanel';
+import { AIAssistantPanel } from '../components/AIAssistantPanel';
+import { LearnerAnalytics } from '../components/LearnerAnalytics';
 import { supabase } from '../lib/supabase';
-import { Play, Key, RefreshCw, AlertTriangle } from 'lucide-react';
+import { Play, Key, AlertTriangle, Activity, Code2 } from 'lucide-react';
 import { diagnoseWithGemini, geminiKeyManager } from '../services/geminiService';
+import type { Attempt, LearnerModelStats, Diagnosis } from '../types';
 
 const DUMMY_CHALLENGE = {
   id: 'challenge-1',
   title: 'Check Even Number',
-  description: 'Write a Python function called `is_even(n)` that returns True if the given number `n` is even, and False otherwise.',
+  description: 'Write a Python function called `is_even(n)` that returns True if the given number `n` is even, and False otherwise. Watch out for how you compare values!',
   initialCode: 'def is_even(n):\n    if n % 2 = 0:\n        return True\n    else:\n        return False\n',
-  language: 'python'
+  language: 'python',
+  concept: 'Control Flow & Operators'
 };
 
 const RESOLUTION_CHALLENGE = {
   id: 'challenge-1-resolution',
   title: 'Check Odd Number (Resolution Assessment)',
-  description: 'Now, write a Python function called `is_odd(n)` that returns True if `n` is odd. Apply what you just learned!',
+  description: 'To confirm you have resolved the misconception regarding assignment vs equality, write a Python function called `is_odd(n)` that returns True if `n` is odd.',
   initialCode: 'def is_odd(n):\n    # Write your code here\n    pass\n',
-  language: 'python'
+  language: 'python',
+  concept: 'Control Flow & Operators'
 };
 
 export const LearningModule: React.FC = () => {
   const [challenge, setChallenge] = useState(DUMMY_CHALLENGE);
   const [code, setCode] = useState(challenge.initialCode);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [diagnosis, setDiagnosis] = useState<Diagnosis | null>(null);
+  const [attempts, setAttempts] = useState<Attempt[]>([]);
+  const [showAnalytics, setShowAnalytics] = useState(false);
   const [rotationMessage, setRotationMessage] = useState<string | null>(null);
+  
+  // Stats derivation for Learner Analytics
+  const [stats, setStats] = useState<LearnerModelStats>({
+    conceptMastery: [
+      { subject: 'Variables', score: 90, fullMark: 100 },
+      { subject: 'Control Flow', score: 40, fullMark: 100 },
+      { subject: 'Functions', score: 80, fullMark: 100 },
+      { subject: 'Loops', score: 60, fullMark: 100 },
+      { subject: 'Data Types', score: 85, fullMark: 100 },
+    ],
+    recurringMisconceptions: [],
+    totalAttempts: 0,
+    resolutionRate: 0,
+  });
+
   const [keyCount, setKeyCount] = useState<number>(0);
   const [currentKeyIndex, setCurrentKeyIndex] = useState<number>(0);
 
@@ -35,14 +55,51 @@ export const LearningModule: React.FC = () => {
     setCurrentKeyIndex(geminiKeyManager.getCurrentKeyIndex());
   }, []);
 
+  // Update stats dynamically as attempts grow
+  useEffect(() => {
+    const errorMap: Record<string, number> = {};
+    let resolvedCount = 0;
+    
+    attempts.forEach(a => {
+      if (a.diagnosis?.misconception) {
+        errorMap[a.diagnosis.misconception] = (errorMap[a.diagnosis.misconception] || 0) + 1;
+      }
+      if (a.diagnosis?.is_correct) {
+        resolvedCount++;
+      }
+    });
+
+    const recurring = Object.entries(errorMap)
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count);
+
+    const resRate = attempts.length > 0 ? Math.round((resolvedCount / attempts.length) * 100) : 0;
+
+    setStats(prev => ({
+      ...prev,
+      totalAttempts: attempts.length,
+      resolutionRate: resRate,
+      recurringMisconceptions: recurring,
+    }));
+  }, [attempts]);
+
   const handleSubmit = async () => {
     setIsSubmitting(true);
     setRotationMessage(null);
 
+    const newAttempt: Attempt = {
+      id: Date.now().toString(),
+      code,
+      timestamp: new Date(),
+      status: 'analyzing',
+      diagnosis: null
+    };
+
+    setAttempts(prev => [...prev, newAttempt]);
+
     try {
       let result: Diagnosis | null = null;
 
-      // 1. Try Gemini with auto-cycling key pool if keys exist
       if (geminiKeyManager.getKeyCount() > 0) {
         result = await diagnoseWithGemini(
           challenge.title,
@@ -56,7 +113,6 @@ export const LearningModule: React.FC = () => {
         );
         setCurrentKeyIndex(geminiKeyManager.getCurrentKeyIndex());
       } else {
-        // 2. Try Supabase Edge Function
         const userId = '00000000-0000-0000-0000-000000000000';
         const { data, error } = await supabase.functions.invoke('diagnose-misconception', {
           body: {
@@ -68,39 +124,40 @@ export const LearningModule: React.FC = () => {
             userId,
           },
         });
-
         if (error) throw error;
         result = data?.diagnosis;
       }
 
       if (result) {
-        setDiagnosis(result);
-
-        // Record attempt to Supabase attempts table if available
+        setAttempts(prev => prev.map(a => a.id === newAttempt.id ? { ...a, status: 'analyzed', diagnosis: result } : a));
         try {
-          await supabase.from('attempts').insert([
-            {
-              challenge_id: challenge.id,
-              code,
-              language: challenge.language,
-              is_correct: result.is_correct,
-              diagnosis: result,
-            },
-          ]);
+          await supabase.from('attempts').insert([{
+            challenge_id: challenge.id,
+            code,
+            language: challenge.language,
+            is_correct: result.is_correct,
+            diagnosis: result,
+          }]);
         } catch (dbErr) {
-          console.warn('Could not record attempt to Supabase (check RLS / table):', dbErr);
+          console.warn('DB recording skipped:', dbErr);
         }
       }
     } catch (error: any) {
       console.error('Error submitting code:', error);
-
-      // Graceful fallback for UI testing if no API keys configured or network offline
-      setDiagnosis({
-        is_correct: false,
-        misconception: "Assignment operator '=' used in comparison context",
-        explanation: "In Python, a single '=' assigns a value to a variable, whereas '==' compares two values. Inside the condition 'n % 2 = 0', Python expects an expression that evaluates to True/False, not an assignment statement.",
-        intervention: "Take a closer look at line 2. How do you check if the remainder of dividing by 2 equals 0 without reassigning?"
-      });
+      // Demo Fallback
+      setTimeout(() => {
+        setAttempts(prev => prev.map(a => a.id === newAttempt.id ? {
+          ...a, 
+          status: 'analyzed',
+          diagnosis: {
+            is_correct: false,
+            misconception: "Assignment operator '=' used in comparison context",
+            explanation: "In Python, a single '=' assigns a value to a variable, whereas '==' compares two values. Inside the condition 'n % 2 = 0', Python expects an expression that evaluates to True/False, not an assignment statement.",
+            intervention: "Take a closer look at line 2. How do you check if the remainder of dividing by 2 equals 0 without reassigning?"
+          }
+        } : a));
+        setIsSubmitting(false);
+      }, 1500);
     } finally {
       setIsSubmitting(false);
     }
@@ -109,102 +166,108 @@ export const LearningModule: React.FC = () => {
   const handleNextChallenge = () => {
     setChallenge(RESOLUTION_CHALLENGE);
     setCode(RESOLUTION_CHALLENGE.initialCode);
-    setDiagnosis(null);
+    setAttempts([]);
     setRotationMessage(null);
   };
 
   return (
-    <div className="flex flex-col h-screen bg-gray-950 text-gray-100">
-      {/* Header */}
-      <header className="p-4 border-b border-gray-800 bg-gray-900 flex justify-between items-center shadow-md">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-blue-600 rounded flex items-center justify-center font-bold text-xl shadow-blue-500/20 shadow-md">
-            R
+    <div className="flex flex-col h-screen bg-[#0d1117] text-gray-200 font-sans selection:bg-blue-500/30">
+      {/* Navbar */}
+      <header className="px-6 py-3 border-b border-gray-800/60 bg-[#161b22] flex justify-between items-center z-20">
+        <div className="flex items-center gap-4">
+          <div className="w-9 h-9 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-lg flex items-center justify-center shadow-lg shadow-blue-900/20">
+            <Code2 className="w-5 h-5 text-white" />
           </div>
-          <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-indigo-400">
-            Re:Learn
-          </h1>
-          <span className="text-xs text-gray-400 bg-gray-800/80 px-2 py-0.5 rounded border border-gray-700">
-            Adaptive AI Pedagogy
-          </span>
+          <div>
+            <h1 className="text-xl font-bold tracking-tight text-gray-100">Re:Learn</h1>
+            <p className="text-[10px] uppercase tracking-widest text-blue-400 font-semibold">Adaptive Multimodal Platform</p>
+          </div>
         </div>
 
-        {/* Status Indicators */}
-        <div className="flex items-center gap-3">
-          {keyCount > 0 ? (
-            <div className="flex items-center gap-2 text-xs bg-emerald-950/60 text-emerald-300 border border-emerald-800/60 px-3 py-1.5 rounded-full">
-              <Key className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Key Pool: <strong>{keyCount} keys</strong></span>
-              <span className="text-emerald-500 font-mono">(Active: #{currentKeyIndex + 1})</span>
-            </div>
-          ) : (
-            <div className="flex items-center gap-2 text-xs bg-amber-950/50 text-amber-300 border border-amber-800/50 px-3 py-1.5 rounded-full">
-              <Key className="w-3.5 h-3.5" />
-              <span>No Gemini keys (Demo Fallback)</span>
+        <div className="flex items-center gap-4">
+          {keyCount > 0 && (
+            <div className="flex items-center gap-2 text-xs bg-[#0d1117] border border-gray-700 px-3 py-1.5 rounded-md text-gray-300">
+              <Key className="w-3.5 h-3.5 text-blue-400" />
+              <span>Key Pool: {keyCount}</span>
+              <span className="text-blue-400 font-mono">#{currentKeyIndex + 1}</span>
             </div>
           )}
-
-          <div className="text-sm text-gray-300 bg-gray-800 px-3 py-1 rounded-full font-mono font-medium border border-gray-700">
-            {challenge.language.toUpperCase()}
-          </div>
+          
+          <button 
+            onClick={() => setShowAnalytics(true)}
+            className="flex items-center gap-2 bg-indigo-900/40 hover:bg-indigo-900/60 text-indigo-300 border border-indigo-700/50 px-4 py-2 rounded-lg text-sm font-medium transition-all"
+          >
+            <Activity className="w-4 h-4" />
+            Learner Model
+          </button>
         </div>
       </header>
 
-      {/* Rotation Notice Banner if a key failed over */}
       {rotationMessage && (
-        <div className="bg-amber-900/30 border-b border-amber-800/50 px-6 py-2.5 flex items-center gap-2 text-amber-200 text-sm animate-fadeIn">
+        <div className="bg-amber-900/40 border-b border-amber-700/50 px-6 py-2 flex items-center gap-2 text-amber-200 text-sm">
           <AlertTriangle className="w-4 h-4 text-amber-400 flex-shrink-0" />
-          <span>{rotationMessage}</span>
+          {rotationMessage}
         </div>
       )}
 
-      {/* Main Body */}
+      {/* Main Grid */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Left column: Challenge & Editor */}
-        <div className="flex-1 flex flex-col border-r border-gray-800 w-1/2">
-          <div className="p-6 bg-gray-900/80 border-b border-gray-800 shadow-sm">
-            <div className="flex items-center justify-between mb-2">
-              <h2 className="text-2xl font-bold tracking-tight">{challenge.title}</h2>
-              {challenge.id.includes('resolution') && (
-                <span className="text-xs font-semibold uppercase tracking-wider bg-purple-950 text-purple-300 border border-purple-800 px-2.5 py-1 rounded-md">
-                  Resolution Assessment
-                </span>
-              )}
+        
+        {/* Left: Challenge Context */}
+        <div className="w-[350px] flex flex-col border-r border-gray-800/60 bg-[#161b22] overflow-y-auto">
+          <div className="p-6">
+            <div className="inline-block px-2.5 py-1 bg-gray-800 border border-gray-700 rounded text-xs font-mono text-gray-400 mb-4">
+              {challenge.concept}
             </div>
-            <p className="text-gray-300 leading-relaxed bg-gray-800/50 p-4 rounded-lg border border-gray-700/50 text-sm">
-              {challenge.description}
-            </p>
-          </div>
-
-          <div className="flex-1 relative p-4 flex flex-col bg-gray-950">
-            <div className="flex justify-between items-center mb-2 px-2">
-              <span className="text-xs font-mono font-semibold text-gray-400">solution.py</span>
-            </div>
-            <div className="flex-1 min-h-0">
-              <CodeEditor
-                language={challenge.language}
-                code={code}
-                onChange={(val) => setCode(val || '')}
-              />
-            </div>
-            <div className="mt-4 flex justify-between items-center">
-              <div className="text-xs text-gray-500">
-                Press <kbd className="px-1.5 py-0.5 bg-gray-800 rounded border border-gray-700 text-gray-300">Run Code</kbd> to initiate semantic misconception analysis
+            <h2 className="text-2xl font-bold text-gray-100 mb-4 tracking-tight leading-tight">
+              {challenge.title}
+            </h2>
+            {challenge.id.includes('resolution') && (
+              <div className="bg-purple-900/20 border border-purple-800/40 text-purple-300 text-xs px-3 py-2 rounded-lg mb-4 font-medium uppercase tracking-wider">
+                Resolution Assessment Active
               </div>
+            )}
+            <div className="prose prose-invert prose-sm">
+              <p className="text-gray-300 leading-relaxed opacity-90">{challenge.description}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Center: Editor */}
+        <div className="flex-1 flex flex-col min-w-0 bg-[#0d1117] relative">
+          <div className="flex-1 p-6 flex flex-col relative">
+            <div className="bg-[#1e1e1e] border border-gray-700 rounded-xl overflow-hidden flex-1 shadow-2xl flex flex-col">
+              <div className="px-4 py-2 bg-[#2d2d2d] border-b border-gray-700 flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-red-500/80"></div>
+                <div className="w-3 h-3 rounded-full bg-yellow-500/80"></div>
+                <div className="w-3 h-3 rounded-full bg-green-500/80"></div>
+                <span className="ml-2 text-xs font-mono text-gray-400">solution.py</span>
+              </div>
+              <div className="flex-1 relative">
+                <CodeEditor
+                  language={challenge.language}
+                  code={code}
+                  onChange={(val) => setCode(val || '')}
+                />
+              </div>
+            </div>
+
+            {/* Run Bar */}
+            <div className="mt-6 flex justify-end">
               <button
                 onClick={handleSubmit}
                 disabled={isSubmitting}
-                className="bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800 text-white font-semibold py-2 px-6 rounded-lg transition-colors flex items-center gap-2 shadow-lg shadow-blue-900/30 cursor-pointer"
+                className="group relative overflow-hidden bg-blue-600 hover:bg-blue-500 disabled:bg-gray-800 disabled:text-gray-500 text-white font-semibold py-3 px-8 rounded-xl transition-all shadow-lg shadow-blue-900/20 disabled:shadow-none flex items-center gap-3"
               >
                 {isSubmitting ? (
                   <>
-                    <RefreshCw className="w-4 h-4 animate-spin" />
-                    <span>Diagnosing...</span>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                    Running Analysis...
                   </>
                 ) : (
                   <>
                     <Play className="w-4 h-4 fill-current" />
-                    <span>Run Code</span>
+                    Submit for Diagnosis
                   </>
                 )}
               </button>
@@ -212,19 +275,19 @@ export const LearningModule: React.FC = () => {
           </div>
         </div>
 
-        {/* Right column: Intervention Panel */}
-        <div className="w-[480px] bg-gray-900 overflow-y-auto p-4 border-l border-gray-800/50">
-          <InterventionPanel
-            diagnosis={diagnosis}
-            isLoading={isSubmitting}
-            onRetry={() => {
-              setDiagnosis(null);
-              setRotationMessage(null);
-            }}
+        {/* Right: AI Assistant Timeline */}
+        <div className="w-[450px] border-l border-gray-800/60 shadow-xl z-10 flex flex-col bg-[#161b22]">
+          <AIAssistantPanel 
+            attempts={attempts} 
+            isAnalyzing={isSubmitting} 
             onNextChallenge={handleNextChallenge}
           />
         </div>
       </div>
+
+      {showAnalytics && (
+        <LearnerAnalytics stats={stats} onClose={() => setShowAnalytics(false)} />
+      )}
     </div>
   );
 };
