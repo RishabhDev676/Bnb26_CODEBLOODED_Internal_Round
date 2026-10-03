@@ -12,6 +12,7 @@ import {
 import { diagnoseWithGemini, geminiKeyManager } from '../services/geminiService';
 import { CHALLENGES_CATALOG } from '../data/misconceptionsDataset';
 import type { Attempt, LearnerModelStats, Diagnosis, Challenge, DomainType } from '../types';
+import confetti from 'canvas-confetti';
 
 function evaluateChallengeLocally(challenge: Challenge, code: string): Diagnosis {
   const cleanCode = code.replace(/\r/g, '').trim();
@@ -301,6 +302,7 @@ export const LearningModule: React.FC = () => {
   const [showEvaluation, setShowEvaluation] = useState(false);
   const [showInstructor, setShowInstructor] = useState(false);
   const [rotationMessage, setRotationMessage] = useState<string | null>(null);
+  const [xp, setXp] = useState(0);
 
   // Custom Colab ML Model Endpoint State
   const [customModelUrl, setCustomModelUrl] = useState<string>(() => localStorage.getItem('relearn_model_url') || '');
@@ -518,6 +520,16 @@ export const LearningModule: React.FC = () => {
       if (result) {
         setAttempts(prev => prev.map(a => a.id === newAttempt.id ? { ...a, status: 'analyzed', diagnosis: result } : a));
 
+        if (result.is_correct) {
+          setXp(prev => prev + 100);
+          confetti({
+            particleCount: 150,
+            spread: 70,
+            origin: { y: 0.6 },
+            colors: ['#3B82F6', '#8B5CF6', '#10B981']
+          });
+        }
+
         try {
           await supabase.from('attempts').insert([{
             challenge_id: challenge.id,
@@ -595,6 +607,12 @@ export const LearningModule: React.FC = () => {
 
         {/* Action Controls & Resilience Status */}
         <div className="flex items-center gap-3">
+          {/* XP Bar */}
+          <div className="flex items-center gap-2 bg-gradient-to-r from-amber-950 to-orange-950 border border-amber-800/50 px-3 py-1.5 rounded-lg shadow-[0_0_10px_rgba(217,119,6,0.3)]">
+            <Sparkles className="w-4 h-4 text-amber-400" />
+            <span className="text-amber-300 font-bold text-sm tracking-wide">{xp} XP</span>
+          </div>
+
           {keyCount > 0 && (
             <div className="flex items-center gap-2 text-xs bg-[#0b0f15] border border-gray-700/80 px-3 py-1.5 rounded-lg text-gray-300">
               <Key className="w-3.5 h-3.5 text-blue-400" />

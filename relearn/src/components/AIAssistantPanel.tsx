@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AlertCircle, CheckCircle2, Lightbulb, Bot, Terminal, Code2, Volume2, VolumeX } from 'lucide-react';
 import type { Attempt } from '../types';
+import { TypewriterText } from './TypewriterText';
 
 interface AIAssistantPanelProps {
   attempts: Attempt[];
@@ -181,17 +182,23 @@ export const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
                         </div>
                       )}
 
-                      <div className="text-gray-300 text-sm leading-relaxed">
-                        {attempt.diagnosis.explanation || "The model identified that the logic does not satisfy the problem criteria. Review your condition and return values."}
+                      <div className="text-gray-300 text-sm leading-relaxed min-h-[3rem]">
+                        <TypewriterText 
+                          text={attempt.diagnosis.explanation || "The model identified that the logic does not satisfy the problem criteria. Review your condition and return values."} 
+                          delay={15} 
+                        />
                       </div>
 
                       {attempt.diagnosis.intervention && (
-                        <div className="mt-4 bg-blue-950/30 p-4 rounded-xl border border-blue-900/50 relative overflow-hidden">
-                          <div className="absolute top-0 left-0 w-1 h-full bg-blue-500"></div>
-                          <div className="flex gap-3">
-                            <Lightbulb className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
-                            <p className="text-blue-100 italic text-sm leading-relaxed">
-                              "{attempt.diagnosis.intervention}"
+                        <div className="mt-4 bg-blue-950/30 p-4 rounded-xl border border-blue-900/50 relative overflow-hidden backdrop-blur-sm">
+                          {/* Mesh gradient glow inside the blue hint box */}
+                          <div className="absolute inset-0 bg-gradient-to-br from-blue-600/10 via-transparent to-indigo-600/10 pointer-events-none"></div>
+                          
+                          <div className="absolute top-0 left-0 w-1 h-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.8)]"></div>
+                          <div className="flex gap-3 relative z-10">
+                            <Lightbulb className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5 animate-pulse" />
+                            <p className="text-blue-100 italic text-sm leading-relaxed min-h-[2rem]">
+                              "<TypewriterText text={attempt.diagnosis.intervention} delay={25} />"
                             </p>
                           </div>
                         </div>
