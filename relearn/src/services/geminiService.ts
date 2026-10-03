@@ -136,25 +136,27 @@ export async function diagnoseWithGemini(
   challengeDescription: string,
   code: string,
   language: string,
-  onRotationNotice?: (message: string) => void
+  onRotationNotice?: (message: string) => void,
+  imageBase64?: string,
+  imageMimeType?: string
 ): Promise<DiagnosisResult> {
   return geminiKeyManager.executeWithRotation(async (apiKey, _keyIndex) => {
-    const prompt = `You are an expert programming pedagogue analyzing student code for introductory programming concepts.
+    const prompt = `You are an expert pedagogical AI analyzing a student's answer (code or handwritten work) for misconceptions.
 Challenge: "${challengeTitle}"
 Description: ${challengeDescription}
-Target Language: ${language}
+Target Domain/Language: ${language}
 
 Student Submission:
 \`\`\`${language}
 ${code}
 \`\`\`
+${imageBase64 ? "\n(The student has also attached an image of their handwritten work/diagram. Analyze the image to identify where their logic or formula breaks down.)" : ""}
 
 Evaluate if the solution is logically correct.
 If incorrect:
-1. Identify the underlying cognitive misconception (e.g., confusing assignment '=' with comparison '==', reference mutation vs copy, 0-indexing confusion, off-by-one errors).
-2. Differentiate between simple syntax slips and genuine mental model misconceptions.
-3. Provide a clear, supportive conceptual explanation of what happened.
-4. Formulate a targeted socratic intervention/hint that guides the student to correct their mental model without immediately giving away the complete solution.
+1. Identify the underlying cognitive misconception (e.g., sign error, wrong formula application, scope confusion).
+2. Provide a clear, supportive conceptual explanation of what happened.
+3. Formulate a targeted socratic intervention/hint that guides the student to correct their mental model.
 
 Output ONLY valid JSON matching this schema:
 {
@@ -164,6 +166,19 @@ Output ONLY valid JSON matching this schema:
   "intervention": string or null
 }`;
 
+    const parts: any[] = [{ text: prompt }];
+
+    if (imageBase64 && imageMimeType) {
+      // Remove the data URL prefix if present (e.g., "data:image/jpeg;base64,")
+      const base64Data = imageBase64.includes(',') ? imageBase64.split(',')[1] : imageBase64;
+      parts.push({
+        inlineData: {
+          mimeType: imageMimeType,
+          data: base64Data
+        }
+      });
+    }
+
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
 
     const response = await fetch(url, {
@@ -172,11 +187,7 @@ Output ONLY valid JSON matching this schema:
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        contents: [
-          {
-            parts: [{ text: prompt }],
-          },
-        ],
+        contents: [{ parts }],
         generationConfig: {
           temperature: 0.1,
           responseMimeType: "application/json",

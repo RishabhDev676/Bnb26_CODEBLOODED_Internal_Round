@@ -52,10 +52,26 @@ export const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
             >
               {/* User Code Bubble */}
               <div className="self-end max-w-[85%] bg-gray-800 border border-gray-700 rounded-2xl rounded-tr-sm p-4 shadow-md">
-                <div className="flex items-center gap-2 mb-2 text-xs text-gray-400 font-mono">
-                  <Terminal className="w-3 h-3" />
-                  Attempt #{idx + 1}
+                <div className="flex items-center justify-between mb-2 text-xs text-gray-400 font-mono">
+                  <span className="flex items-center gap-1.5">
+                    <Terminal className="w-3 h-3" />
+                    Attempt #{idx + 1}
+                  </span>
+                  {attempt.imageBase64 && (
+                    <span className="text-[10px] text-cyan-400 bg-cyan-950/60 border border-cyan-800/60 px-2 py-0.5 rounded-full font-sans">
+                      📷 Attached Work
+                    </span>
+                  )}
                 </div>
+                {attempt.imageBase64 && (
+                  <div className="mb-3 rounded-lg overflow-hidden border border-gray-700 max-h-48 bg-black/40">
+                    <img
+                      src={attempt.imageBase64}
+                      alt="Student Working"
+                      className="w-full h-auto object-contain max-h-48"
+                    />
+                  </div>
+                )}
                 <pre className="text-sm font-mono text-gray-300 overflow-x-auto whitespace-pre-wrap">
                   {attempt.code}
                 </pre>

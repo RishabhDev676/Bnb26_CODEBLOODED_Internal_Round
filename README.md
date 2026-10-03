@@ -156,12 +156,13 @@ Visit `http://localhost:5173` in your browser.
 - [x] **Learner Model Dashboard**: Recharts-powered radar & bar charts displaying concept mastery and recurring bottlenecks.
 - [x] Adaptive Resolution Challenge loop to verify mastery.
 
-### Phase 4: Hackathon Stretch Goals (🚀 Next Steps)
-- [ ] **Expanded Dataset**: Populate the `misconceptions` database with hundreds of known cognitive traps in Python, Algebra, and Physics.
-- [ ] **Multimodal Inputs**: Allow image uploads for handwritten working steps in Algebra/Physics, evaluated via Gemini 1.5 Pro Vision.
-- [ ] **Model Evaluation Metrics**: Run accuracy benchmarks against a holdout set of beginner mistakes to quantify diagnostic precision.
+### Phase 4: Hackathon Advanced Deliverables (✅ Completed)
+- [x] **Expanded Dataset**: Pre-populated dictionary & SQL seed (`seed.sql`) of known cognitive traps across Python, JavaScript, Algebra, and Physics.
+- [x] **Multimodal Inputs**: Enabled image upload for handwritten calculations and diagrams, analyzed jointly with code via Gemini 1.5 Flash Vision.
+- [x] **Model Evaluation Benchmark Suite**: Built-in interactive benchmark evaluator testing diagnostic accuracy and differentiation across Seen vs Unseen misconceptions.
 
 ---
+
 
 
 ## 👥 Authors & Acknowledgments
