@@ -13,6 +13,8 @@ import { diagnoseWithGemini, geminiKeyManager } from '../services/geminiService'
 import { CHALLENGES_CATALOG } from '../data/misconceptionsDataset';
 import type { Attempt, LearnerModelStats, Diagnosis, Challenge, DomainType } from '../types';
 import confetti from 'canvas-confetti';
+import { WelcomeSplash } from '../components/WelcomeSplash';
+import { AnimatePresence } from 'framer-motion';
 
 function evaluateChallengeLocally(challenge: Challenge, code: string): Diagnosis {
   const cleanCode = code.replace(/\r/g, '').trim();
@@ -303,6 +305,7 @@ export const LearningModule: React.FC = () => {
   const [showInstructor, setShowInstructor] = useState(false);
   const [rotationMessage, setRotationMessage] = useState<string | null>(null);
   const [xp, setXp] = useState(0);
+  const [hasStarted, setHasStarted] = useState(false);
 
   // Custom Colab ML Model Endpoint State
   const [customModelUrl, setCustomModelUrl] = useState<string>(() => localStorage.getItem('relearn_model_url') || '');
@@ -586,6 +589,9 @@ export const LearningModule: React.FC = () => {
 
   return (
     <div className="flex flex-col h-screen bg-[#0d1117] text-gray-200 font-sans selection:bg-blue-500/30">
+      <AnimatePresence>
+        {!hasStarted && <WelcomeSplash onStart={() => setHasStarted(true)} />}
+      </AnimatePresence>
       {/* Top Navbar */}
       <header className="px-6 py-2.5 border-b border-gray-800/80 bg-[#161b22] flex justify-between items-center z-20 shadow-md">
         <div className="flex items-center gap-4">
