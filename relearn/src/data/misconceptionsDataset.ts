@@ -87,17 +87,31 @@ export const MISCONCEPTIONS_DICTIONARY: MisconceptionEntry[] = [
 
 export const CHALLENGES_CATALOG: Challenge[] = [
   {
+    id: 'ch-alg-binomial',
+    domain: 'algebra',
+    title: '1. Algebraic Expansion (Algebra)',
+    description: 'Simplify the expression (2x + 3)^2. Provide your algebraic working or upload an image of your handwritten steps.',
+    initialCode: `# Simplify (2x + 3)^2\n# Student Working:\n# Step 1: Square the first term = 4x^2\n# Step 2: Square the second term = 9\n# Result: 4x^2 + 9\n`,
+    language: 'python',
+    concept: 'Binomial Expansion & Polynomials',
+    resolutionChallengeId: 'ch-alg-binomial-resolution',
+    hints: ['Remember FOIL: First, Outside, Inside, Last.']
+  },
+  {
+    id: 'ch-alg-binomial-resolution',
+    domain: 'algebra',
+    title: 'Resolution: Negative Binomial (Algebra)',
+    description: 'Confirm resolution: Expand (3x - 5)^2 correctly, being careful with signs.',
+    initialCode: `# Simplify (3x - 5)^2\n`,
+    language: 'python',
+    concept: 'Binomial Expansion & Polynomials',
+  },
+  {
     id: 'ch-py-is-even',
     domain: 'programming',
-    title: '1. Even Number Check (Python)',
+    title: '2. Even Number Check (Python)',
     description: 'Write a Python function called `is_even(n)` that returns True if the integer `n` is even, and False otherwise.',
-    initialCode: `def is_even(n):
-    # Check if remainder is 0
-    if n % 2 = 0:
-        return True
-    else:
-        return False
-`,
+    initialCode: `def is_even(n):\n    # Check if remainder is 0\n    if n % 2 = 0:\n        return True\n    else:\n        return False\n`,
     language: 'python',
     concept: 'Conditionals & Operators',
     resolutionChallengeId: 'ch-py-is-odd-resolution',
@@ -108,10 +122,7 @@ export const CHALLENGES_CATALOG: Challenge[] = [
     domain: 'programming',
     title: 'Resolution: Odd Number Check (Python)',
     description: 'Verify your resolution: Write a Python function called `is_odd(n)` that returns True if `n` is odd. Apply correct comparative logic.',
-    initialCode: `def is_odd(n):
-    # Apply what you learned about comparative operators
-    pass
-`,
+    initialCode: `def is_odd(n):\n    # Apply what you learned about comparative operators\n    pass\n`,
     language: 'python',
     concept: 'Conditionals & Operators',
     hints: ['Use the equality operator == or inequality !=.']
@@ -119,15 +130,9 @@ export const CHALLENGES_CATALOG: Challenge[] = [
   {
     id: 'ch-js-equality',
     domain: 'programming',
-    title: '2. Strict Authentication Guard (JavaScript)',
-    description: 'Write a function `isValidToken(role, tier)` that verifies if role is strictly "admin" and tier is strictly integer 1. Guard against string "1" being passed.',
-    initialCode: `function isValidToken(role, tier) {
-    if (role == "admin" && tier == 1) {
-        return true;
-    }
-    return false;
-}
-`,
+    title: '3. Strict Authentication Guard (JavaScript)',
+    description: 'Write a function `isValidToken(role, tier)` that verifies if role is strictly "admin" and tier is strictly integer 1. Guard against string "1".',
+    initialCode: `function isValidToken(role, tier) {\n    if (role == "admin" && tier == 1) {\n        return true;\n    }\n    return false;\n}\n`,
     language: 'javascript',
     concept: 'Type Coercion & Identity',
     resolutionChallengeId: 'ch-js-equality-resolution',
@@ -138,49 +143,16 @@ export const CHALLENGES_CATALOG: Challenge[] = [
     domain: 'programming',
     title: 'Resolution: Strict Validation (JavaScript)',
     description: 'Confirm resolution: Write `isPositiveInteger(val)` returning true ONLY if val is strictly a number and greater than 0.',
-    initialCode: `function isPositiveInteger(val) {
-    // Return true only if val is strictly of type 'number' and > 0
-}
-`,
+    initialCode: `function isPositiveInteger(val) {\n    // Return true only if val is strictly of type 'number' and > 0\n}\n`,
     language: 'javascript',
     concept: 'Type Coercion & Identity',
-  },
-  {
-    id: 'ch-alg-binomial',
-    domain: 'algebra',
-    title: '3. Algebraic Expansion (Algebra)',
-    description: 'Simplify the expression (2x + 3)^2. Provide your algebraic working or upload an image of your handwritten steps.',
-    initialCode: `# Simplify (2x + 3)^2
-# Student Working:
-# Step 1: Square the first term = 4x^2
-# Step 2: Square the second term = 9
-# Result: 4x^2 + 9
-`,
-    language: 'python',
-    concept: 'Binomial Expansion & Polynomials',
-    resolutionChallengeId: 'ch-alg-binomial-resolution',
-    hints: ['Remember FOIL: First, Outside, Inside, Last.']
-  },
-  {
-    id: 'ch-alg-binomial-resolution',
-    domain: 'algebra',
-    title: 'Resolution: Binomial Expansion (Algebra)',
-    description: 'Confirm resolution: Expand and simplify (3x - 5)^2 fully, including the cross-product term.',
-    initialCode: `# Expand (3x - 5)^2 fully
-result = ""
-`,
-    language: 'python',
-    concept: 'Binomial Expansion & Polynomials',
   },
   {
     id: 'ch-phys-kinematics',
     domain: 'physics',
     title: '4. Freefall & Deceleration (Physics)',
     description: 'A ball is launched vertically upward at 20 m/s with g = -9.8 m/s^2. Explain the signs of velocity and acceleration during ascent and descent.',
-    initialCode: `# Physics Analysis:
-# During ascent: v > 0, a = -9.8 (slowing down)
-# During descent: v < 0, a = +9.8 (because speed is increasing, so acceleration must become positive)
-`,
+    initialCode: `# Physics Analysis:\n# During ascent: v > 0, a = -9.8 (slowing down)\n# During descent: v < 0, a = +9.8 (because speed is increasing)\n`,
     language: 'python',
     concept: 'Kinematics & Vector Signs',
     resolutionChallengeId: 'ch-phys-kinematics-resolution',
@@ -191,15 +163,11 @@ result = ""
     domain: 'physics',
     title: 'Resolution: Vector Direction in Kinematics',
     description: 'Confirm resolution: Write the signs of velocity and acceleration for an elevator descending while braking.',
-    initialCode: `# Elevator moving downwards (down is negative) and slowing down:
-# v_sign = 
-# a_sign = 
-`,
+    initialCode: `# Elevator moving downwards (down is negative) and slowing down:\n# v_sign = \n# a_sign = \n`,
     language: 'python',
     concept: 'Kinematics & Vector Signs',
   }
 ];
-
 export const BENCHMARK_TEST_SUITE: BenchmarkCase[] = [
   {
     id: 'bm-1',
