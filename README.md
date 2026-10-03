@@ -25,6 +25,7 @@ Traditional automated grading systems typically evaluate student code through un
 * **Strict JSON-Guaranteed Evaluation**: Backed by high-speed Groq inference using structured JSON output.
 * **Targeted Interventions**: Replaces cryptic stack traces with clear conceptual explanations and reflective guiding questions.
 * **Adaptive Resolution Loop**: Presents a modified follow-up challenge to verify whether the learner has resolved their mental misconception.
+* **Multi-Key Cycling & Resilience Engine**: Supports pooling multiple free Google Gemini API keys with automatic cycling, rate-limit (429) detection, per-key cooldowns, and transparent failover so your application never gets blocked by free-tier limits.
 * **Learner Progression & Analytics**: Stores learner attempts, code submissions, and diagnosis histories in a PostgreSQL database with Row Level Security (RLS).
 
 ---
@@ -35,8 +36,8 @@ Traditional automated grading systems typically evaluate student code through un
 |---|---|
 | **Frontend** | React 19, TypeScript, Vite, Tailwind CSS v4, Lucide React |
 | **Code Editor** | `@monaco-editor/react` |
-| **Backend & Database** | Supabase (PostgreSQL, Supabase Auth, Deno Edge Functions) |
-| **AI Inference** | Groq API (`llama3-70b-8192`) |
+| **AI Inference** | Google Gemini (`gemini-1.5-flash` / `gemini-2.0-flash`) & Groq (`llama3-70b-8192`) |
+| **API Resilience** | Multi-Key Cycling & Automatic Failover Engine |
 
 ---
 
