@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { CodeEditor } from '../components/CodeEditor';
 import { AIAssistantPanel } from '../components/AIAssistantPanel';
 import { LearnerAnalytics } from '../components/LearnerAnalytics';
@@ -867,12 +867,11 @@ export const LearningModule: React.FC = () => {
       {showEvaluation && (
         <ModelEvaluationModal onClose={() => setShowEvaluation(false)} />
       )}
-
-<<<<<<< HEAD
       {/* Institutional & Instructor Dashboard Modal */}
       {showInstructor && (
         <InstitutionalDashboard onClose={() => setShowInstructor(false)} />
-=======
+      )}
+
       {/* Connect Colab Trained Model Modal */}
       {showModelConfig && (
         <div className="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -889,9 +888,9 @@ export const LearningModule: React.FC = () => {
               </div>
               <button
                 onClick={() => setShowModelConfig(false)}
-                className="text-gray-400 hover:text-white p-1 rounded-lg text-lg leading-none"
+                className="text-gray-400 hover:text-white p-1 rounded-lg text-lg leading-none cursor-pointer"
               >
-                âœ•
+                ✕
               </button>
             </div>
 
@@ -934,7 +933,7 @@ export const LearningModule: React.FC = () => {
                       if (res.ok) {
                         localStorage.setItem('relearn_model_url', tempModelUrl.trim());
                         setCustomModelUrl(tempModelUrl.trim());
-                        setModelTestStatus('âœ… Connected successfully to custom FLAN-T5 model!');
+                        setModelTestStatus('✅ Connected successfully to custom FLAN-T5 model!');
                       } else {
                         localStorage.setItem('relearn_model_url', tempModelUrl.trim());
                         setCustomModelUrl(tempModelUrl.trim());
@@ -981,7 +980,6 @@ export const LearningModule: React.FC = () => {
             </div>
           </div>
         </div>
->>>>>>> 0edf380 (model created)
       )}
     </div>
   );
