@@ -76,58 +76,38 @@ CodeBlooded_maharashtra_round/
 ---
 
 ## 🚀 Getting Started
-
 ### 1. Prerequisites
 * [Node.js](https://nodejs.org/) (v18 or higher recommended)
-* A [Supabase](https://supabase.com/) account and project
-* A [Groq Cloud](https://console.groq.com/) API key
 
-### 2. Installation
-Clone the repository and install the dependencies:
+### 2. Installation & Quick Start
+We have designed the app to be evaluated easily by judges without needing to deploy complex backends. All AI inference can run directly from the frontend using the Gemini Multi-Key pool!
 
 ```bash
 # Clone the repository
-git clone https://github.com/RishabhDev676/CodeBlooded_maharashtra_round.git
-cd CodeBlooded_maharashtra_round/relearn
+git clone https://github.com/RishabhDev676/Bnb26_CODEBLOODED_Internal_Round.git
+cd Bnb26_CODEBLOODED_Internal_Round/relearn
 
 # Install dependencies
 npm install
 ```
 
-### 3. Environment Variables
-Copy `.env.example` to `.env`:
+### 3. Environment Setup (Optional for Demo)
+Create a `.env` file in the `relearn` directory. You can add Google Gemini API keys to enable live AI diagnosis. If no keys are provided, the app will gracefully fall back to a built-in simulation mode.
 
-```bash
-cp .env.example .env
-```
-
-Configure your environment variables:
 ```env
-VITE_SUPABASE_URL=https://your-project.supabase.co
-VITE_SUPABASE_ANON_KEY=your-supabase-anon-key
+# Add one or more Gemini API keys (comma separated) for the key-rotation engine
+VITE_GEMINI_API_KEYS=key1,key2,key3
 ```
 
-### 4. Database Setup & Edge Function Deployment
-Apply the migration to your Supabase project:
-```bash
-# Push database schema
-npx supabase db push
-
-# Set your Groq API Key secret in Supabase
-npx supabase secrets set GROQ_API_KEY=your_groq_api_key
-
-# Deploy the Edge Function
-npx supabase functions deploy diagnose-misconception
-```
-
-### 5. Run the Local Development Server
+### 4. Run the Development Server
 ```bash
 npm run dev
 ```
 
-Visit `http://localhost:5173` in your browser.
+Visit `http://localhost:5173` in your browser. 
+That's it! You can now test the interactive Code Editor, Multimodal Image upload, and Model Evaluation Suite.
 
-> **💡 Quick Demo Mode**: If you haven't connected Supabase or Groq keys yet, the frontend comes with a built-in fallback simulation that allows you to experience the diagnosis and intervention workflow immediately!
+> **💡 Note on Database (Optional)**: If you wish to persist learner attempts to a database, you can connect a Supabase project by adding `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` to your `.env` and pushing the schema located in `supabase/seed.sql`.
 
 ---
 
