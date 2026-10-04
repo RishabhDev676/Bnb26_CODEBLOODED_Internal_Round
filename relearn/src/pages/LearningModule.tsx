@@ -9,12 +9,103 @@ import {
   Play, AlertTriangle, Activity, Code2, Image, 
   X, Cpu, Layers, Sparkles, ChevronRight, HelpCircle, GraduationCap, BrainCircuit
 } from 'lucide-react';
-import { callGeminiLastResort } from '../services/geminiService';
+import { diagnoseCognitiveMisconception } from '../services/geminiService';
 import { MISCONCEPTIONS_DICTIONARY, CHALLENGES_CATALOG } from '../data/misconceptionsDataset';
 import type { Attempt, LearnerModelStats, Diagnosis, Challenge, DomainType } from '../types';
 import confetti from 'canvas-confetti';
 import { WelcomeSplash } from '../components/WelcomeSplash';
 import { AnimatePresence } from 'framer-motion';
+
+export interface CustomPreset {
+  id: string;
+  name: string;
+  domain: string;
+  language: string;
+  concept: string;
+  title: string;
+  question: string;
+  initialWork: string;
+}
+
+export const CUSTOM_PRESETS: CustomPreset[] = [
+  {
+    id: 'preset-math-quadratic',
+    name: 'Algebra: Quadratic Factoring',
+    domain: 'mathematics',
+    language: 'markdown',
+    concept: 'Quadratic Equations & Factoring',
+    title: 'Factoring Quadratic Trinomial',
+    question: 'Solve x² - 5x + 6 = 0 by factoring. State the factored form and find all roots for x.',
+    initialWork: '# Problem: Solve x^2 - 5x + 6 = 0\n# Factored expression:\n(x - 2)(x + 3) = 0\n\n# Roots:\nx = 2 or x = -3\n'
+  },
+  {
+    id: 'preset-py-even',
+    name: 'Python: Even Parity Function',
+    domain: 'programming',
+    language: 'python',
+    concept: 'Arithmetic & Modulo Operations',
+    title: 'Even Number Parity Function',
+    question: 'Write a Python function called `is_even(n)` that returns True if the integer `n` is even, and False otherwise.',
+    initialWork: 'def is_even(n):\n    # Return True if number is even\n    if n / 2 == 0:\n        return True\n    return False\n'
+  },
+  {
+    id: 'preset-js-auth',
+    name: 'JavaScript: Auth Boolean Logic',
+    domain: 'programming',
+    language: 'javascript',
+    concept: 'Boolean Logic & Truthiness',
+    title: 'Strict Role Authentication Guard',
+    question: 'Write a JavaScript function `isAuthenticated(user)` that returns true if `user.isLoggedIn` and `user.role === "admin"`.',
+    initialWork: 'function isAuthenticated(user) {\n    // Check if user is logged in and is admin\n    if (user.isLoggedIn = true && user.role == "admin") {\n        return true;\n    }\n    return false;\n}\n'
+  },
+  {
+    id: 'preset-phys-accel',
+    name: 'Physics: Deceleration & Signs',
+    domain: 'physics',
+    language: 'markdown',
+    concept: 'Newtonian Kinematics & Signs',
+    title: 'Deceleration Vector Coordinates',
+    question: 'A 2 kg cart rolling forward at +10 m/s applies brakes and decelerates at 4 m/s² for 2 seconds. What is its acceleration vector a and final velocity v?',
+    initialWork: '# Problem Data:\n# v_initial = +10 m/s\n# Deceleration rate = 4 m/s^2\n# Since it is decelerating, acceleration is positive: a = +4 m/s^2\n# v_final = v_initial + a*t = 10 + (4)(2) = 18 m/s\n'
+  },
+  {
+    id: 'preset-chem-stoich',
+    name: 'Chemistry: Stoichiometry Moles',
+    domain: 'chemistry',
+    language: 'markdown',
+    concept: 'Stoichiometry & Molar Ratios',
+    title: 'Reaction Molar Yield',
+    question: 'How many moles of H₂O are produced when 4 moles of H₂ react with excess O₂ according to the equation 2H₂ + O₂ → 2H₂O?',
+    initialWork: '# Reaction: 2H2 + O2 -> 2H2O\n# Calculation:\n# Since 4 moles H2 react and formula has 2 moles,\n# Moles of H2O = 4 / 2 = 2 moles\n'
+  }
+];
+
+export const getFilenameForLanguage = (lang: string): string => {
+  switch (lang?.toLowerCase()) {
+    case 'javascript': return 'solution.js';
+    case 'typescript': return 'solution.ts';
+    case 'python': return 'solution.py';
+    case 'java': return 'Solution.java';
+    case 'cpp': case 'c++': return 'solution.cpp';
+    case 'c': return 'solution.c';
+    case 'sql': return 'query.sql';
+    case 'markdown': return 'solution.math';
+    default: return 'working.txt';
+  }
+};
+
+export const getMonacoLanguage = (lang: string): string => {
+  switch (lang?.toLowerCase()) {
+    case 'python': return 'python';
+    case 'javascript': return 'javascript';
+    case 'typescript': return 'typescript';
+    case 'java': return 'java';
+    case 'cpp': case 'c++': case 'c': return 'cpp';
+    case 'sql': return 'sql';
+    case 'markdown': return 'markdown';
+    default: return 'plaintext';
+  }
+};
 
 function evaluateChallengeLocally(challenge: Challenge, code: string): Diagnosis {
   const cleanCode = code.replace(/\r/g, '').trim();
@@ -308,6 +399,16 @@ export const LearningModule: React.FC = () => {
   const [hasStarted, setHasStarted] = useState(false);
   const [mobileTab, setMobileTab] = useState<'problem' | 'editor' | 'assistant'>('editor');
 
+  // Problem Mode: 'demo' (existing catalog) vs 'custom' (enter any problem)
+  const [problemMode, setProblemMode] = useState<'demo' | 'custom'>('demo');
+  const [customProblem, setCustomProblem] = useState({
+    title: 'Custom Problem',
+    question: 'Solve x² - 5x + 6 = 0 by factoring. Find the roots for x.',
+    domain: 'mathematics',
+    language: 'markdown',
+    concept: 'Quadratic Equations & Factoring'
+  });
+
   // Custom Colab ML Model Endpoint State
   const [customModelUrl, setCustomModelUrl] = useState<string>(() => localStorage.getItem('relearn_model_url') || '');
   const [showModelConfig, setShowModelConfig] = useState(false);
@@ -343,12 +444,12 @@ export const LearningModule: React.FC = () => {
     }
   });
 
-  const learnFromMistake = (learnedCode: string, diagnosis: Diagnosis) => {
+  const learnFromMistake = (challengeId: string, learnedCode: string, diagnosis: Diagnosis) => {
     try {
       const stored = localStorage.getItem('relearn_learned_db');
-      const db: { code: string; diagnosis: Diagnosis }[] = stored ? JSON.parse(stored) : [];
-      if (!db.some(e => e.code.trim() === learnedCode.trim())) {
-        db.push({ code: learnedCode.trim(), diagnosis });
+      const db: { challengeId?: string; code: string; diagnosis: Diagnosis }[] = stored ? JSON.parse(stored) : [];
+      if (!db.some(e => e.challengeId === challengeId && e.code.trim() === learnedCode.trim())) {
+        db.push({ challengeId, code: learnedCode.trim(), diagnosis });
         localStorage.setItem('relearn_learned_db', JSON.stringify(db));
         setLearnedCount(db.length);
         console.log('[Self-Learning DB] New misconception pattern learned! Total patterns:', db.length);
@@ -356,12 +457,12 @@ export const LearningModule: React.FC = () => {
     } catch { /* non-fatal */ }
   };
 
-  const lookupLearnedDB = (submittedCode: string): Diagnosis | null => {
+  const lookupLearnedDB = (challengeId: string, submittedCode: string): Diagnosis | null => {
     try {
       const stored = localStorage.getItem('relearn_learned_db');
       if (!stored) return null;
-      const db: { code: string; diagnosis: Diagnosis }[] = JSON.parse(stored);
-      const match = db.find(e => e.code === submittedCode.trim());
+      const db: { challengeId?: string; code: string; diagnosis: Diagnosis }[] = JSON.parse(stored);
+      const match = db.find(e => (e.challengeId ? e.challengeId === challengeId : true) && e.code.trim() === submittedCode.trim());
       return match ? match.diagnosis : null;
     } catch { return null; }
   };
@@ -394,6 +495,57 @@ export const LearningModule: React.FC = () => {
     setAttachedImage(null);
     setRotationMessage(null);
     setMobileTab('editor');
+  };
+
+  // Switch domain, select domain's challenge, and reset misconception state
+  const handleSelectDomain = (d: DomainType | 'all') => {
+    setSelectedDomain(d);
+    const domainChallenges = d === 'all'
+      ? CHALLENGES_CATALOG.filter(c => !c.id.includes('resolution'))
+      : CHALLENGES_CATALOG.filter(c => c.domain === d && !c.id.includes('resolution'));
+
+    if (domainChallenges.length > 0) {
+      const isCurrentInDomain = d === 'all' ? true : domainChallenges.some(c => c.id === challenge.id);
+      if (!isCurrentInDomain) {
+        handleSelectChallenge(domainChallenges[0]);
+      } else {
+        setAttempts([]);
+        setAttachedImage(null);
+        setRotationMessage(null);
+      }
+    } else {
+      setAttempts([]);
+      setAttachedImage(null);
+      setRotationMessage(null);
+    }
+  };
+
+  const handleSetProblemMode = (mode: 'demo' | 'custom') => {
+    setProblemMode(mode);
+    setAttempts([]);
+    setAttachedImage(null);
+    setRotationMessage(null);
+    if (mode === 'demo') {
+      setCode(challenge.initialCode);
+    } else {
+      if (code === challenge.initialCode || !code.trim()) {
+        setCode('# Write or paste your solution, equations, or reasoning steps below:\n');
+      }
+    }
+  };
+
+  const handleApplyCustomPreset = (preset: CustomPreset) => {
+    setCustomProblem({
+      title: preset.title,
+      question: preset.question,
+      domain: preset.domain,
+      language: preset.language,
+      concept: preset.concept
+    });
+    setCode(preset.initialWork);
+    setAttempts([]);
+    setAttachedImage(null);
+    setRotationMessage(null);
   };
 
   // Dynamic Learner Analytics update
@@ -449,21 +601,34 @@ export const LearningModule: React.FC = () => {
     setRotationMessage(null);
     setMobileTab('assistant');
 
+    const submittedCode = code;
+    const currentProblemText = problemMode === 'custom'
+      ? (customProblem.question?.trim() || customProblem.title || 'Custom Problem')
+      : (challenge.description || challenge.title);
+    const currentDomain = problemMode === 'custom' ? customProblem.domain : challenge.domain;
+    const currentLanguage = problemMode === 'custom' ? customProblem.language : challenge.language;
+    const currentTitle = problemMode === 'custom' ? (customProblem.title || 'Custom Problem') : challenge.title;
+
     const newAttempt: Attempt = {
       id: Date.now().toString(),
-      code,
+      problemId: problemMode === 'demo' ? challenge.id : null,
+      problemTitle: currentTitle,
+      problemText: currentProblemText,
+      domain: currentDomain,
+      language: currentLanguage,
+      code: submittedCode,
       timestamp: new Date(),
       status: 'analyzing',
       diagnosis: null,
       imageBase64: attachedImage || undefined,
     };
 
-    setAttempts(prev => [...prev, newAttempt]);
+    setAttempts([newAttempt]);
 
     try {
       let result: Diagnosis | null = null;
 
-      // 1. Try Custom Trained Model (Google Colab / FastAPI)
+      // ── TIER 1: Custom Colab ML Model (if tunnel active) ──
       if (customModelUrl.trim()) {
         try {
           const endpoint = customModelUrl.trim().replace(/\/$/, '') + '/diagnose';
@@ -476,169 +641,208 @@ export const LearningModule: React.FC = () => {
               'ngrok-skip-browser-warning': 'true',
             },
             body: JSON.stringify({
-              problem: challenge.description || challenge.title,
-              code
+              problem: currentProblemText,
+              code: submittedCode,
+              domain: currentDomain,
+              language: currentLanguage,
+              image: attachedImage || null
             })
           });
           if (resp.ok) {
             const data = await resp.json();
-            console.log('Model Response from Colab:', data);
+            console.log('[Colab API] Response:', data);
 
-            // Ground-truth correctness gate: the local rule engine knows definitively
-            // when code is correct (e.g. bitwise even check, strict ===, etc.)
-            const localCheck = evaluateChallengeLocally(challenge, code);
+            let isCorrect = Boolean(data.is_correct);
+            let misconception = typeof data.misconception === 'string' && data.misconception.trim() ? data.misconception.trim() : null;
+            let explanation = typeof data.explanation === 'string' && data.explanation.trim() ? data.explanation.trim() : null;
+            let intervention = typeof data.intervention === 'string' && data.intervention.trim() ? data.intervention.trim() : null;
 
-            // If local check says correct, trust it immediately â€” model cannot override a correct solution
-            if (localCheck.is_correct) {
-              result = localCheck;
-            } else {
-              // Extract structured fields from model response
-              // Support both flat JSON and nested { raw_output: "..." } from Colab
-              let isCorrect = Boolean(data.is_correct);
-              let misconception: string | null = typeof data.misconception === 'string' && data.misconception.trim() ? data.misconception.trim() : null;
-              let explanation: string | null = typeof data.explanation === 'string' && data.explanation.trim() ? data.explanation.trim() : null;
-              let intervention: string | null = typeof data.intervention === 'string' && data.intervention.trim() ? data.intervention.trim() : null;
-
-              // Handle raw_output fallback (some Colab models emit: { raw_output: '<json string>' })
-              const rawStr: string | null = typeof data.raw_output === 'string' ? data.raw_output : (typeof data === 'string' ? data : null);
-              if (rawStr) {
-                try {
-                  // Attempt full JSON parse of raw_output first (structured Colab output)
-                  const parsedRaw = JSON.parse(rawStr);
-                  if (parsedRaw.is_correct !== undefined) isCorrect = Boolean(parsedRaw.is_correct);
-                  if (parsedRaw.misconception) misconception = String(parsedRaw.misconception).trim() || misconception;
-                  if (parsedRaw.explanation) explanation = String(parsedRaw.explanation).trim() || explanation;
-                  if (parsedRaw.intervention) intervention = String(parsedRaw.intervention).trim() || intervention;
-                } catch {
-                  // Regex extraction fallback for plain-text raw_output
-                  if (/"is_correct":\s*true/i.test(rawStr)) isCorrect = true;
-                  const miscMatch = rawStr.match(/"misconception":\s*"([^"]+)"/i);
-                  if (miscMatch) misconception = miscMatch[1];
-                  const expMatch = rawStr.match(/"explanation":\s*"([^"]+)"/i);
-                  if (expMatch) explanation = expMatch[1];
-                  const intMatch = rawStr.match(/"intervention":\s*"([^"]+)"/i);
-                  if (intMatch) intervention = intMatch[1];
-                }
+            const rawStr = typeof data.raw_output === 'string' ? data.raw_output : (typeof data === 'string' ? data : null);
+            if (rawStr) {
+              try {
+                const parsedRaw = JSON.parse(rawStr);
+                if (parsedRaw.is_correct !== undefined) isCorrect = Boolean(parsedRaw.is_correct);
+                if (parsedRaw.misconception) misconception = String(parsedRaw.misconception).trim() || misconception;
+                if (parsedRaw.explanation) explanation = String(parsedRaw.explanation).trim() || explanation;
+                if (parsedRaw.intervention) intervention = String(parsedRaw.intervention).trim() || intervention;
+              } catch {
+                if (/"is_correct":\s*true/i.test(rawStr)) isCorrect = true;
+                const miscMatch = rawStr.match(/"misconception":\s*"([^"]+)"/i);
+                if (miscMatch) misconception = miscMatch[1];
+                const expMatch = rawStr.match(/"explanation":\s*"([^"]+)"/i);
+                if (expMatch) explanation = expMatch[1];
+                const intMatch = rawStr.match(/"intervention":\s*"([^"]+)"/i);
+                if (intMatch) intervention = intMatch[1];
               }
+            }
 
-              // Reject trivial / garbage model outputs (model not generating useful text yet)
-              const TRIVIAL = new Set(['false', 'true', 'none', 'null', 'undefined', '']);
-              const isTrivialExp = !explanation || TRIVIAL.has(explanation.toLowerCase()) || explanation.trim().length < 15;
-              const isTrivialMisc = !misconception || TRIVIAL.has(misconception.toLowerCase()) || misconception.trim().length < 3;
+            const TRIVIAL = new Set(['false', 'true', 'none', 'null', 'undefined', '']);
+            const isTrivialExp = !explanation || TRIVIAL.has(explanation.toLowerCase()) || explanation.trim().length < 15;
+            const isTrivialMisc = !misconception || TRIVIAL.has(misconception.toLowerCase()) || misconception.trim().length < 3;
 
-              if (isTrivialExp && isTrivialMisc) {
-                // Model output is garbage — fall back to local rule engine which now catches
-                // universal patterns (built-in shadowing, etc.) BEFORE challenge-specific fallbacks
-                result = localCheck;
-              } else {
-                // Model provided substantive output — prefer it, fill any missing fields from localCheck
-                result = {
-                  is_correct: isCorrect,
-                  misconception: (!isTrivialMisc ? misconception : null) ?? localCheck.misconception ?? 'Logical Misconception Detected',
-                  explanation: (!isTrivialExp ? explanation : null) ?? localCheck.explanation,
-                  intervention: intervention || localCheck.intervention
-                };
-              }
+            if (!isTrivialExp || !isTrivialMisc || isCorrect) {
+              result = {
+                is_correct: isCorrect,
+                misconception: isCorrect ? null : ((!isTrivialMisc ? misconception : null) ?? 'Logical Misconception Detected'),
+                explanation: (!isTrivialExp ? explanation : null) ?? (isCorrect ? 'Solution is logically sound!' : 'Review your reasoning steps.'),
+                intervention: isCorrect ? null : intervention
+              };
             }
           }
         } catch (colabErr) {
-          console.warn('Custom Colab model failed, using fallback:', colabErr);
+          console.error('[Colab API] Failed:', colabErr);
         }
       }
 
-      // ── TIER 2: Local Rule Engine + Learned Database + Misconceptions Dictionary ──
+      // ── TIER 2: General Pedagogical AI Engine (Gemini Multi-Modal Vision & Reasoning) ──
       if (!result) {
-        // 2a. Check if we already learned this exact pattern from a previous mistake
-        const learnedMatch = lookupLearnedDB(code);
+        try {
+          console.log('[Pedagogical AI] Querying Universal Cognitive Engine via Gemini...');
+          const aiResult = await diagnoseCognitiveMisconception({
+            problemTitle: currentTitle,
+            problemText: currentProblemText,
+            studentWork: submittedCode,
+            domain: currentDomain,
+            language: currentLanguage,
+            imageBase64: attachedImage || undefined,
+            imageMimeType: attachedImageMime,
+            previousAttempts: attempts.map(a => ({ code: a.code, misconception: a.diagnosis?.misconception }))
+          });
+
+          if (aiResult) {
+            console.log('[Pedagogical AI] Diagnosis successfully generated:', aiResult);
+            result = aiResult;
+            const cacheKey = problemMode === 'demo' ? challenge.id : 'custom';
+            learnFromMistake(cacheKey, submittedCode, result);
+          }
+        } catch (aiErr) {
+          console.error('[Pedagogical AI] Universal Engine error:', aiErr);
+        }
+      }
+
+      // ── TIER 3: Local Learned Knowledge Base ──
+      if (!result) {
+        const cacheKey = problemMode === 'demo' ? challenge.id : 'custom';
+        const learnedMatch = lookupLearnedDB(cacheKey, submittedCode);
         if (learnedMatch) {
           console.log('[LearnDB] Exact pattern hit in learned database!');
           result = learnedMatch;
         }
-
-        // 2b. Challenge-specific + universal AST / regex rule engine
-        if (!result) {
-          result = evaluateChallengeLocally(challenge, code);
-        }
-
-        // 2c. If local check only returned generic fallback, search 50+ misconceptions catalog
-        const isGenericFallback = result && !result.is_correct && result.misconception === challenge.concept;
-        if (isGenericFallback) {
-          const dbMatch = searchMisconceptionsDB(challenge, code);
-          if (dbMatch) {
-            result = dbMatch;
-          }
-        }
       }
 
-      // ── TIER 3: Gemini — LAST RESORT ONLY when code pattern is completely unknown ──
-      const isStillUnknown = result && !result.is_correct && result.misconception === challenge.concept;
-      if (!result || isStillUnknown) {
-        setRotationMessage('🔍 Unknown pattern — querying Gemini AI as last resort to identify misconception...');
-        try {
-          const geminiResult = await callGeminiLastResort(
-            challenge.title,
-            challenge.description,
-            code,
-            challenge.language,
-            attachedImage || undefined,
-            attachedImageMime
-          );
-          if (geminiResult) {
-            console.log('[Self-Learning AI] Received diagnosis from Gemini. Saving to database so model learns from mistake.');
-            result = geminiResult;
-            learnFromMistake(code, geminiResult); // Learn from mistake and expand DB!
-            setRotationMessage('🧠 Model learned new pattern! Stored in self-learning database.');
-            setTimeout(() => setRotationMessage(null), 4000);
-          } else {
-            setRotationMessage(null);
-          }
-        } catch (geminiErr) {
-          console.warn('[Gemini LastResort] Failed:', geminiErr);
-          setRotationMessage(null);
-        }
-      }
-
-      // Safety fallback: ensure a valid diagnosis object always exists
+      // ── TIER 4: Misconceptions Catalog Semantic Match ──
       if (!result) {
-        result = evaluateChallengeLocally(challenge, code);
+        const currentChallengeObj: Challenge = {
+          id: problemMode === 'demo' ? challenge.id : 'custom',
+          domain: currentDomain,
+          title: currentTitle,
+          description: currentProblemText,
+          initialCode: submittedCode,
+          language: currentLanguage,
+          concept: problemMode === 'demo' ? challenge.concept : (customProblem.concept || 'General Problem Solving')
+        };
+        const dbMatch = searchMisconceptionsDB(currentChallengeObj, submittedCode);
+        if (dbMatch) {
+          result = dbMatch;
+        }
       }
 
-      if (result) {
-        setAttempts(prev => prev.map(a => a.id === newAttempt.id ? { ...a, status: 'analyzed', diagnosis: result } : a));
-
-        if (result.is_correct) {
-          setXp(prev => prev + 100);
-          confetti({
-            particleCount: 150,
-            spread: 70,
-            origin: { y: 0.6 },
-            colors: ['#3B82F6', '#8B5CF6', '#10B981']
-          });
+      // ── TIER 5: Fallback Rule / Safety Engine ──
+      if (!result) {
+        if (problemMode === 'demo') {
+          result = evaluateChallengeLocally(challenge, submittedCode);
+        } else {
+          result = {
+            is_correct: false,
+            misconception: "Conceptual Inconsistency Detected",
+            explanation: `Review your solution steps for: "${currentProblemText}". Ensure your formula, syntax, or reasoning steps align with the underlying principles.`,
+            intervention: "Try tracing your steps one by one or attach a diagram/working sheet to pinpoint where the logic deviates."
+          };
         }
+      }
 
-        try {
-          await supabase.from('attempts').insert([{
-            challenge_id: challenge.id,
-            code,
-            language: challenge.language,
-            is_correct: result.is_correct,
-            diagnosis: result,
-          }]);
-        } catch (dbErr) {
-          console.warn('DB recording skipped:', dbErr);
+      const finalDiagnosis: Diagnosis = {
+        is_correct: Boolean(result.is_correct),
+        misconception: result.is_correct ? null : (result.misconception || 'Logical Misconception Detected'),
+        specific_error: result.specific_error || null,
+        evidence: result.evidence || null,
+        explanation: result.explanation || (result.is_correct ? "Your reasoning is logically sound and accurate!" : "Review your solution logic."),
+        intervention: result.is_correct ? null : result.intervention,
+        follow_up_question: result.follow_up_question || null,
+        confidence: typeof result.confidence === 'number' ? result.confidence : 0.95,
+        next_step: result.next_step || null,
+      };
+
+      setAttempts([{
+        ...newAttempt,
+        status: 'analyzed',
+        diagnosis: finalDiagnosis,
+      }]);
+
+      if (finalDiagnosis.is_correct) {
+        setXp(prev => prev + 100);
+        confetti({
+          particleCount: 150,
+          spread: 70,
+          origin: { y: 0.6 },
+          colors: ['#3B82F6', '#8B5CF6', '#10B981']
+        });
+      }
+
+      setStats(prev => {
+        const newTotal = prev.totalAttempts + 1;
+        const prevResolved = Math.round((prev.resolutionRate * prev.totalAttempts) / 100);
+        const newResolved = prevResolved + (finalDiagnosis.is_correct ? 1 : 0);
+        const newRate = Math.round((newResolved / newTotal) * 100);
+
+        const errorMap: Record<string, number> = {};
+        prev.recurringMisconceptions.forEach(m => { errorMap[m.name] = m.count; });
+        if (finalDiagnosis.misconception) {
+          errorMap[finalDiagnosis.misconception] = (errorMap[finalDiagnosis.misconception] || 0) + 1;
         }
+        const recurring = Object.entries(errorMap)
+          .map(([name, count]) => ({ name, count }))
+          .sort((a, b) => b.count - a.count);
+
+        return {
+          ...prev,
+          totalAttempts: newTotal,
+          resolutionRate: newRate,
+          recurringMisconceptions: recurring,
+        };
+      });
+
+      try {
+        await supabase.from('attempts').insert([{
+          challenge_id: problemMode === 'demo' ? challenge.id : null,
+          code: submittedCode,
+          language: currentLanguage,
+          is_correct: finalDiagnosis.is_correct,
+          diagnosis: finalDiagnosis,
+        }]);
+      } catch (dbErr) {
+        console.warn('DB recording skipped:', dbErr);
       }
     } catch (error: any) {
       console.error('Error submitting code:', error);
-      const fallbackDiagnosis = evaluateChallengeLocally(challenge, code);
-      setTimeout(() => {
-        setAttempts(prev => prev.map(a => a.id === newAttempt.id ? {
-          ...a,
-          status: 'analyzed',
-          diagnosis: fallbackDiagnosis
-        } : a));
-        setIsSubmitting(false);
-      }, 500);
+      const fallbackDiagnosis = problemMode === 'demo'
+        ? evaluateChallengeLocally(challenge, submittedCode)
+        : {
+            is_correct: false,
+            misconception: 'Submission Analysis Timeout',
+            explanation: 'The system encountered a network delay while evaluating your solution.',
+            intervention: 'Please verify your network connection and retry your submission.'
+          };
+      setAttempts([{
+        ...newAttempt,
+        status: 'analyzed',
+        diagnosis: {
+          is_correct: Boolean(fallbackDiagnosis.is_correct),
+          misconception: fallbackDiagnosis.is_correct ? null : fallbackDiagnosis.misconception,
+          explanation: fallbackDiagnosis.explanation,
+          intervention: fallbackDiagnosis.is_correct ? null : fallbackDiagnosis.intervention
+        }
+      }]);
     } finally {
       setIsSubmitting(false);
     }
@@ -697,7 +901,7 @@ export const LearningModule: React.FC = () => {
         </div>
 
         {/* Action Controls & Resilience Status */}
-        <div className="flex items-center gap-1.5 sm:gap-2.5 overflow-x-auto py-1 max-w-full">
+        <div className="flex items-center gap-1.5 sm:gap-2.5 overflow-x-auto py-1 max-w-full flex-nowrap scrollbar-none w-full sm:w-auto">
           {/* XP Bar */}
           <div className="flex items-center gap-1.5 bg-gradient-to-r from-amber-950 to-orange-950 border border-amber-800/50 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg shadow-[0_0_10px_rgba(217,119,6,0.3)] flex-shrink-0">
             <Sparkles className="w-3.5 h-3.5 text-amber-400" />
@@ -785,32 +989,32 @@ export const LearningModule: React.FC = () => {
       <div className="lg:hidden bg-[#161b22] border-b border-gray-800 px-3 py-1.5 flex items-center justify-around gap-2 text-xs font-semibold z-10 flex-shrink-0">
         <button 
           onClick={() => setMobileTab('problem')}
-          className={`flex-1 py-1.5 px-2 rounded-lg flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
+          className={`flex-1 py-1.5 px-2 rounded-lg flex items-center justify-center gap-1.5 transition-colors cursor-pointer min-w-0 ${
             mobileTab === 'problem' ? 'bg-blue-600 text-white shadow-sm' : 'bg-gray-800/50 hover:bg-gray-800 text-gray-400'
           }`}
         >
-          <HelpCircle className="w-3.5 h-3.5" />
-          <span>1. Problem</span>
+          <HelpCircle className="w-3.5 h-3.5 flex-shrink-0" />
+          <span className="truncate">1. Problem</span>
         </button>
         <button 
           onClick={() => setMobileTab('editor')}
-          className={`flex-1 py-1.5 px-2 rounded-lg flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
+          className={`flex-1 py-1.5 px-2 rounded-lg flex items-center justify-center gap-1.5 transition-colors cursor-pointer min-w-0 ${
             mobileTab === 'editor' ? 'bg-blue-600 text-white shadow-sm' : 'bg-gray-800/50 hover:bg-gray-800 text-gray-400'
           }`}
         >
-          <Code2 className="w-3.5 h-3.5" />
-          <span>2. Code Editor</span>
+          <Code2 className="w-3.5 h-3.5 flex-shrink-0" />
+          <span className="truncate">2. Editor</span>
         </button>
         <button 
           onClick={() => setMobileTab('assistant')}
-          className={`flex-1 py-1.5 px-2 rounded-lg flex items-center justify-center gap-1.5 transition-colors cursor-pointer relative ${
+          className={`flex-1 py-1.5 px-2 rounded-lg flex items-center justify-center gap-1.5 transition-colors cursor-pointer relative min-w-0 ${
             mobileTab === 'assistant' ? 'bg-blue-600 text-white shadow-sm' : 'bg-gray-800/50 hover:bg-gray-800 text-gray-400'
           }`}
         >
-          <BrainCircuit className="w-3.5 h-3.5 text-cyan-300" />
-          <span>3. AI Pedagogue</span>
+          <BrainCircuit className="w-3.5 h-3.5 text-cyan-300 flex-shrink-0" />
+          <span className="truncate">3. AI Pedagogue</span>
           {attempts.length > 0 && (
-            <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse ml-0.5" />
+            <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse ml-0.5 flex-shrink-0" />
           )}
         </button>
       </div>
@@ -819,168 +1023,296 @@ export const LearningModule: React.FC = () => {
       <div className="flex flex-1 overflow-hidden min-h-0 relative h-full w-full">
         
         {/* Left Column: Challenge Catalog & Problem Context */}
-        <div className={`w-full lg:w-[320px] xl:w-[360px] h-full flex-col border-r border-gray-800/80 bg-[#12161f] overflow-y-auto ${
+        <div className={`w-full lg:w-[280px] xl:w-[320px] 2xl:w-[360px] h-full flex-col border-r border-gray-800/80 bg-[#12161f] overflow-y-auto flex-shrink-0 ${
           mobileTab === 'problem' ? 'flex flex-1 min-h-full' : 'hidden lg:flex'
         }`}>
-          {/* Domain Filter Tabs */}
+          {/* Mode Switcher: Demo Problems vs Custom Problem */}
           <div className="p-3 border-b border-gray-800/80 bg-[#161b22]">
-            <div className="flex items-center gap-1.5 mb-2 text-xs font-semibold text-gray-400">
-              <Layers className="w-3.5 h-3.5 text-blue-400" />
-              <span>Domain Selector</span>
-            </div>
-            <div className="grid grid-cols-4 gap-1 text-[11px] font-medium">
-              {(['all', 'programming', 'algebra', 'physics'] as const).map(d => (
-                <button
-                  key={d}
-                  onClick={() => setSelectedDomain(d)}
-                  className={`py-1 px-1.5 rounded text-center capitalize transition-colors ${
-                    selectedDomain === d
-                      ? 'bg-blue-600 text-white font-bold'
-                      : 'bg-gray-800/60 hover:bg-gray-700/60 text-gray-300'
-                  }`}
-                >
-                  {d}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Challenge Selector Chips */}
-          <div className="p-3 border-b border-gray-800/80 space-y-1.5">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 block px-1">
-              Select Problem
-            </span>
-            {filteredChallenges.map(c => (
+            <div className="flex rounded-xl bg-gray-900/90 p-1 border border-gray-800 gap-1">
               <button
-                key={c.id}
-                onClick={() => handleSelectChallenge(c)}
-                className={`w-full text-left p-2 rounded-lg text-xs transition-all flex items-center justify-between cursor-pointer ${
-                  challenge.id === c.id || challenge.resolutionChallengeId === c.id
-                    ? 'bg-blue-950/60 border border-blue-700/70 text-blue-200 shadow-sm'
-                    : 'bg-gray-800/30 hover:bg-gray-800/60 text-gray-300 border border-transparent'
+                onClick={() => handleSetProblemMode('demo')}
+                className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                  problemMode === 'demo'
+                    ? 'bg-blue-600 text-white shadow-sm'
+                    : 'text-gray-400 hover:text-gray-200'
                 }`}
               >
-                <div className="truncate pr-2">
-                  <div className="font-semibold truncate">{c.title}</div>
-                  <div className="text-[10px] text-gray-400">{c.concept}</div>
-                </div>
-                <ChevronRight className="w-3.5 h-3.5 text-gray-500 flex-shrink-0" />
+                <Layers className="w-3.5 h-3.5" />
+                <span>Demo Problems</span>
               </button>
-            ))}
+              <button
+                onClick={() => handleSetProblemMode('custom')}
+                className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                  problemMode === 'custom'
+                    ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-sm'
+                    : 'text-gray-400 hover:text-gray-200'
+                }`}
+              >
+                <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                <span>+ Custom Problem</span>
+              </button>
+            </div>
           </div>
 
-          {/* Active Challenge Details */}
-          <div className="p-4 sm:p-5 flex-1 space-y-4 pb-16 flex flex-col justify-between min-h-[350px]">
-            <div className="space-y-4">
-              {challenge.id.includes('resolution') && (
-                <div className="bg-purple-950/40 border border-purple-800/60 text-purple-200 text-xs px-3 py-2 rounded-lg flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-purple-400 flex-shrink-0" />
-                  <span>
-                    <strong>Resolution Assessment Mode</strong>: Testing if your cognitive misconception was genuinely resolved.
-                  </span>
+          {problemMode === 'demo' ? (
+            <>
+              {/* Domain Filter Tabs */}
+              <div className="p-3 border-b border-gray-800/80 bg-[#161b22]">
+                <div className="flex items-center gap-1.5 mb-2 text-xs font-semibold text-gray-400">
+                  <Layers className="w-3.5 h-3.5 text-blue-400" />
+                  <span>Domain Selector</span>
                 </div>
-              )}
-
-              <div>
-                <span className="text-[10px] uppercase font-mono font-bold tracking-wider text-blue-400 bg-blue-950/80 px-2 py-0.5 rounded border border-blue-800/50">
-                  {challenge.concept}
-                </span>
-                <h2 className="text-lg sm:text-xl font-bold text-gray-100 mt-2 mb-2 leading-tight">
-                  {challenge.title}
-                </h2>
-                <div className="text-gray-300 text-sm leading-relaxed bg-gray-800/40 p-3.5 rounded-lg border border-gray-700/50">
-                  {challenge.description}
+                <div className="grid grid-cols-4 gap-1 text-[11px] font-medium">
+                  {(['all', 'programming', 'algebra', 'physics'] as const).map(d => (
+                    <button
+                      key={d}
+                      onClick={() => handleSelectDomain(d)}
+                      className={`py-1 px-1.5 rounded text-center capitalize transition-colors ${
+                        selectedDomain === d
+                          ? 'bg-blue-600 text-white font-bold'
+                          : 'bg-gray-800/60 hover:bg-gray-700/60 text-gray-300'
+                      }`}
+                    >
+                      {d}
+                    </button>
+                  ))}
                 </div>
               </div>
 
-              {challenge.hints && challenge.hints.length > 0 && (
-                <div className="bg-gray-800/20 p-3 rounded-lg border border-gray-700/40 text-xs text-gray-400 space-y-1.5">
-                  <div className="flex items-center gap-1.5 text-gray-300 font-semibold mb-1">
-                    <HelpCircle className="w-3.5 h-3.5 text-amber-400" />
-                    <span>Guidance</span>
-                  </div>
-                  <ul className="list-disc list-inside space-y-1 text-gray-300">
-                    {challenge.hints.map((hint, i) => (
-                      <li key={i}>{hint}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
+              {/* Challenge Selector Chips */}
+              <div className="p-3 border-b border-gray-800/80 space-y-1.5">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 block px-1">
+                  Select Problem
+                </span>
+                {filteredChallenges.map(c => (
+                  <button
+                    key={c.id}
+                    onClick={() => handleSelectChallenge(c)}
+                    className={`w-full text-left p-2 rounded-lg text-xs transition-all flex items-center justify-between cursor-pointer ${
+                      challenge.id === c.id || challenge.resolutionChallengeId === c.id
+                        ? 'bg-blue-950/60 border border-blue-700/70 text-blue-200 shadow-sm'
+                        : 'bg-gray-800/30 hover:bg-gray-800/60 text-gray-300 border border-transparent'
+                    }`}
+                  >
+                    <div className="truncate pr-2">
+                      <div className="font-semibold truncate">{c.title}</div>
+                      <div className="text-[10px] text-gray-400">{c.concept}</div>
+                    </div>
+                    <ChevronRight className="w-3.5 h-3.5 text-gray-500 flex-shrink-0" />
+                  </button>
+                ))}
+              </div>
 
-            {/* Quick jump to editor button on mobile */}
-            <div className="lg:hidden pt-4">
-              <button
-                onClick={() => setMobileTab('editor')}
-                className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-blue-900/40"
-              >
-                <span>Open in Code Editor</span>
-                <ChevronRight className="w-4 h-4" />
-              </button>
+              {/* Active Challenge Details */}
+              <div className="p-3 sm:p-5 flex-1 space-y-4 pb-16 flex flex-col justify-between min-h-0">
+                <div className="space-y-4">
+                  {challenge.id.includes('resolution') && (
+                    <div className="bg-purple-950/40 border border-purple-800/60 text-purple-200 text-xs px-3 py-2 rounded-lg flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-purple-400 flex-shrink-0" />
+                      <span>
+                        <strong>Resolution Assessment Mode</strong>: Testing if your cognitive misconception was genuinely resolved.
+                      </span>
+                    </div>
+                  )}
+
+                  <div>
+                    <span className="text-[10px] uppercase font-mono font-bold tracking-wider text-blue-400 bg-blue-950/80 px-2 py-0.5 rounded border border-blue-800/50">
+                      {challenge.concept}
+                    </span>
+                    <h2 className="text-lg sm:text-xl font-bold text-gray-100 mt-2 mb-2 leading-tight">
+                      {challenge.title}
+                    </h2>
+                    <div className="text-gray-300 text-sm leading-relaxed bg-gray-800/40 p-3.5 rounded-lg border border-gray-700/50">
+                      {challenge.description}
+                    </div>
+                  </div>
+
+                  {challenge.hints && challenge.hints.length > 0 && (
+                    <div className="bg-gray-800/20 p-3 rounded-lg border border-gray-700/40 text-xs text-gray-400 space-y-1.5">
+                      <div className="flex items-center gap-1.5 text-gray-300 font-semibold mb-1">
+                        <HelpCircle className="w-3.5 h-3.5 text-amber-400" />
+                        <span>Guidance</span>
+                      </div>
+                      <ul className="list-disc list-inside space-y-1 text-gray-300">
+                        {challenge.hints.map((hint, i) => (
+                          <li key={i}>{hint}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+
+                {/* Quick jump to editor button on mobile */}
+                <div className="lg:hidden pt-4">
+                  <button
+                    onClick={() => setMobileTab('editor')}
+                    className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-blue-900/40"
+                  >
+                    <span>Open in Code Editor</span>
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            </>
+          ) : (
+            /* Custom Problem Creator Form */
+            <div className="p-4 sm:p-5 flex-1 space-y-4 pb-16 flex flex-col justify-between">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 text-xs font-semibold text-purple-300">
+                    <Sparkles className="w-4 h-4 text-purple-400" />
+                    <span>General-Purpose AI Mode</span>
+                  </div>
+                  <span className="text-[10px] text-gray-400 font-mono bg-purple-950/70 border border-purple-800/40 px-2 py-0.5 rounded-full">
+                    Any Subject
+                  </span>
+                </div>
+
+                {/* Quick Preset Templates */}
+                <div className="space-y-1.5">
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 block">
+                    Quick Sample Presets
+                  </span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {CUSTOM_PRESETS.map(preset => (
+                      <button
+                        key={preset.id}
+                        onClick={() => handleApplyCustomPreset(preset)}
+                        className={`text-[11px] px-2 py-1 rounded-lg border transition-all text-left cursor-pointer ${
+                          customProblem.title === preset.title
+                            ? 'bg-purple-900/60 border-purple-500 text-purple-100 font-semibold shadow-sm'
+                            : 'bg-gray-800/60 hover:bg-gray-700/80 border-gray-700 text-gray-300'
+                        }`}
+                      >
+                        {preset.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Problem Statement Textarea */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-gray-300 flex items-center justify-between">
+                    <span>Problem / Question Statement</span>
+                    <span className="text-[10px] text-gray-500 font-normal">Math, Code, Physics, etc.</span>
+                  </label>
+                  <textarea
+                    rows={4}
+                    value={customProblem.question}
+                    onChange={(e) => setCustomProblem(prev => ({ ...prev, question: e.target.value }))}
+                    placeholder="Enter your problem here (e.g., 'Solve 2x² + 5x - 3 = 0', 'Write a Java method to...', 'Calculate acceleration...')"
+                    className="w-full bg-[#0d1117] border border-gray-700 rounded-xl p-3 text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all resize-y"
+                  />
+                </div>
+
+                {/* Domain & Subject Selector */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-gray-300">
+                    Subject / Domain
+                  </label>
+                  <select
+                    value={customProblem.domain}
+                    onChange={(e) => setCustomProblem(prev => ({ ...prev, domain: e.target.value }))}
+                    className="w-full bg-[#0d1117] border border-gray-700 rounded-xl p-2.5 text-xs text-gray-200 focus:outline-none focus:border-purple-500 transition-all cursor-pointer"
+                  >
+                    <option value="mathematics">Mathematics (Algebra, Calculus, Geometry, Probability)</option>
+                    <option value="programming">Computer Science & Programming</option>
+                    <option value="physics">Physics (Mechanics, Kinematics, Dynamics, Optics)</option>
+                    <option value="chemistry">Chemistry (Stoichiometry, Equilibrium)</option>
+                    <option value="logic">Logic, Discrete Math & Reasoning</option>
+                    <option value="other">Other Academic Concept</option>
+                  </select>
+                </div>
+
+                {/* Language / Input Format Selector */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-gray-300">
+                    Language / Working Format
+                  </label>
+                  <select
+                    value={customProblem.language}
+                    onChange={(e) => setCustomProblem(prev => ({ ...prev, language: e.target.value }))}
+                    className="w-full bg-[#0d1117] border border-gray-700 rounded-xl p-2.5 text-xs text-gray-200 focus:outline-none focus:border-purple-500 transition-all cursor-pointer"
+                  >
+                    <option value="python">Python</option>
+                    <option value="javascript">JavaScript</option>
+                    <option value="typescript">TypeScript</option>
+                    <option value="java">Java</option>
+                    <option value="cpp">C / C++</option>
+                    <option value="sql">SQL</option>
+                    <option value="markdown">Math & Formula Working (.math)</option>
+                    <option value="plaintext">Plain Text / Reasoning Steps</option>
+                  </select>
+                </div>
+
+                {/* Topic / Concept Title */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-gray-300">
+                    Topic / Concept Title
+                  </label>
+                  <input
+                    type="text"
+                    value={customProblem.concept}
+                    onChange={(e) => setCustomProblem(prev => ({ ...prev, concept: e.target.value, title: e.target.value || 'Custom Problem' }))}
+                    placeholder="e.g. Quadratic Factoring, Array Pointers, Vector Kinematics..."
+                    className="w-full bg-[#0d1117] border border-gray-700 rounded-xl p-2.5 text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-purple-500 transition-all"
+                  />
+                </div>
+
+                <div className="bg-purple-950/20 border border-purple-800/30 rounded-xl p-3 text-xs text-purple-200/90 space-y-1">
+                  <span className="font-semibold text-purple-300 block">Multimodal Reasoning Active:</span>
+                  <p className="text-[11px] text-gray-400 leading-relaxed">
+                    Type your work in the editor, or click <strong>Attach Work / Diagram</strong> to upload a photo of your handwritten calculation or diagram. The AI diagnostician analyzes both!
+                  </p>
+                </div>
+              </div>
+
+              {/* Quick jump to editor button on mobile */}
+              <div className="lg:hidden pt-4">
+                <button
+                  onClick={() => setMobileTab('editor')}
+                  className="w-full py-3 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-purple-900/40"
+                >
+                  <span>Open in Workspace</span>
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Center Column: Editor, Multimodal Attachment, & Run Controls */}
         <div className={`flex-1 w-full h-full flex-col min-w-0 bg-[#0b0e14] relative overflow-y-auto ${
           mobileTab === 'editor' ? 'flex' : 'hidden lg:flex'
         }`}>
-          <div className="flex-1 p-3 sm:p-5 flex flex-col relative">
-            <div className="bg-[#1e1e1e] border border-gray-700/80 rounded-xl overflow-hidden flex-1 shadow-2xl flex flex-col min-h-[360px]">
-              <div className="px-4 py-2 bg-[#252526] border-b border-gray-700 flex items-center justify-between flex-shrink-0">
+          <div className="flex-1 p-2 sm:p-3.5 lg:p-4 flex flex-col relative min-h-0">
+            <div className="bg-[#1e1e1e] border border-gray-700/80 rounded-xl overflow-hidden flex-1 shadow-2xl flex flex-col min-h-[180px] sm:min-h-[220px] md:min-h-[260px]">
+              <div className="px-3 sm:px-4 py-2 bg-[#252526] border-b border-gray-700 flex items-center justify-between flex-shrink-0">
                 <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-red-500/80"></div>
-                  <div className="w-3 h-3 rounded-full bg-yellow-500/80"></div>
-                  <div className="w-3 h-3 rounded-full bg-green-500/80"></div>
-                  <span className="ml-2 text-xs font-mono text-gray-400">
-                    {challenge.language === 'javascript' ? 'solution.js' : 'solution.py'}
+                  <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-red-500/80"></div>
+                  <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-yellow-500/80"></div>
+                  <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-green-500/80"></div>
+                  <span className="ml-1 sm:ml-2 text-xs font-mono text-gray-400">
+                    {getFilenameForLanguage(problemMode === 'custom' ? customProblem.language : challenge.language)}
                   </span>
                 </div>
-                <span className="text-[11px] font-mono text-gray-400 uppercase">
-                  {challenge.language}
+                <span className="text-[10px] sm:text-[11px] font-mono text-gray-400 uppercase">
+                  {problemMode === 'custom' ? customProblem.language : challenge.language}
                 </span>
               </div>
 
-              <div className="flex-1 relative">
+              <div className="flex-1 relative min-h-0">
                 <CodeEditor
-                  language={challenge.language}
+                  language={getMonacoLanguage(problemMode === 'custom' ? customProblem.language : challenge.language)}
                   code={code}
                   onChange={(val) => setCode(val || '')}
                 />
               </div>
             </div>
 
-            {/* Multimodal Image Attachment Preview */}
-            {attachedImage && (
-              <div className="mt-3 bg-gray-900 border border-cyan-800/60 rounded-xl p-3 flex items-center justify-between animate-fadeIn shadow-md">
-                <div className="flex items-center gap-3">
-                  <img
-                    src={attachedImage}
-                    alt="Handwritten work preview"
-                    className="w-12 h-12 sm:w-14 sm:h-14 object-cover rounded-lg border border-gray-700 shadow-sm"
-                  />
-                  <div>
-                    <span className="text-xs font-semibold text-cyan-300 block">
-                      📷 Multimodal Handwritten Work Attached
-                    </span>
-                    <span className="text-[10px] sm:text-[11px] text-gray-400">
-                      Multimodal engine will analyze your diagram / algebraic steps alongside code
-                    </span>
-                  </div>
-                </div>
-                <button
-                  onClick={handleRemoveImage}
-                  className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-gray-800 rounded-lg transition-colors cursor-pointer"
-                  title="Remove image"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-            )}
-
             {/* Run Bar & Multimodal Attach Button */}
-            <div className="mt-3 sm:mt-4 flex flex-wrap gap-2 items-center justify-between">
-              <div className="flex items-center gap-2">
+            <div className="mt-2.5 sm:mt-3.5 flex flex-wrap gap-2 items-center justify-between flex-shrink-0 order-2">
+              <div className="flex items-center gap-1.5 sm:gap-2">
                 <input
                   type="file"
                   ref={fileInputRef}
@@ -990,14 +1322,14 @@ export const LearningModule: React.FC = () => {
                 />
                 <button
                   onClick={() => fileInputRef.current?.click()}
-                  className="flex items-center gap-2 bg-gray-800/80 hover:bg-gray-700/80 text-gray-200 border border-gray-700 px-3 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer shadow-sm"
+                  className="flex items-center gap-1.5 sm:gap-2 bg-gray-800/80 hover:bg-gray-700/80 text-gray-200 border border-gray-700 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer shadow-sm flex-shrink-0"
                   title="Attach handwritten working or diagram for multimodal diagnosis"
                 >
-                  <Image className="w-4 h-4 text-cyan-400" />
+                  <Image className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-cyan-400" />
                   <span className="hidden sm:inline">Attach Work / Diagram</span>
                   <span className="sm:hidden">Attach Diagram</span>
                 </button>
-                <span className="text-xs text-gray-500 hidden md:inline">
+                <span className="text-[11px] text-gray-500 hidden md:inline">
                   Supports handwritten math & diagrams
                 </span>
               </div>
@@ -1005,11 +1337,11 @@ export const LearningModule: React.FC = () => {
               <button
                 onClick={handleSubmit}
                 disabled={isSubmitting}
-                className="group relative overflow-hidden bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 disabled:opacity-50 text-white font-semibold py-2 sm:py-2.5 px-5 sm:px-7 rounded-xl transition-all shadow-lg shadow-blue-900/30 flex items-center gap-2 cursor-pointer flex-shrink-0"
+                className="group relative overflow-hidden bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 disabled:opacity-50 text-white font-semibold py-2 sm:py-2.5 px-3.5 sm:px-6 rounded-xl transition-all shadow-lg shadow-blue-900/30 flex items-center gap-2 cursor-pointer flex-shrink-0"
               >
                 {isSubmitting ? (
                   <>
-                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                    <div className="w-3.5 h-3.5 sm:w-4 sm:h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                     <span className="text-xs sm:text-sm">Diagnosing...</span>
                   </>
                 ) : (
@@ -1020,11 +1352,39 @@ export const LearningModule: React.FC = () => {
                 )}
               </button>
             </div>
+
+            {/* Multimodal Image Attachment Preview */}
+            {attachedImage && (
+              <div className="mt-2.5 sm:mt-3 bg-gray-900 border border-cyan-800/60 rounded-xl p-2.5 sm:p-3 flex items-center justify-between animate-fadeIn shadow-md flex-shrink-0 order-3">
+                <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+                  <img
+                    src={attachedImage}
+                    alt="Handwritten work preview"
+                    className="w-10 h-10 sm:w-14 sm:h-14 object-cover rounded-lg border border-gray-700 shadow-sm flex-shrink-0"
+                  />
+                  <div className="min-w-0">
+                    <span className="text-xs font-semibold text-cyan-300 block truncate">
+                      📷 Multimodal Work Attached
+                    </span>
+                    <span className="text-[10px] sm:text-[11px] text-gray-400 block line-clamp-1">
+                      Pedagogical AI will analyze your diagram / handwriting alongside your answer
+                    </span>
+                  </div>
+                </div>
+                <button
+                  onClick={handleRemoveImage}
+                  className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-gray-800 rounded-lg transition-colors cursor-pointer flex-shrink-0 ml-2"
+                  title="Remove image"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
         {/* Right Column: AI Assistant Timeline */}
-        <div className={`w-full lg:w-[360px] xl:w-[440px] h-full border-l border-gray-800/80 shadow-2xl z-10 flex-col bg-[#161b22] ${
+        <div className={`w-full lg:w-[300px] xl:w-[350px] 2xl:w-[400px] h-full border-l border-gray-800/80 shadow-2xl z-10 flex-col bg-[#161b22] flex-shrink-0 min-h-0 ${
           mobileTab === 'assistant' ? 'flex flex-1 min-h-full' : 'hidden lg:flex'
         }`}>
           <AIAssistantPanel
@@ -1051,8 +1411,8 @@ export const LearningModule: React.FC = () => {
 
       {/* Connect Colab Trained Model Modal */}
       {showModelConfig && (
-        <div className="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-[#161b22] border border-gray-700/80 rounded-2xl w-full max-w-2xl shadow-2xl p-6 flex flex-col gap-5">
+        <div className="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+          <div className="bg-[#161b22] border border-gray-700/80 rounded-2xl w-full max-w-2xl max-h-[92dvh] overflow-y-auto shadow-2xl p-4 sm:p-6 flex flex-col gap-4 sm:gap-5">
             <div className="flex justify-between items-center border-b border-gray-800 pb-3">
               <div className="flex items-center gap-2.5">
                 <div className="p-2 bg-indigo-950/80 rounded-lg border border-indigo-700/50">

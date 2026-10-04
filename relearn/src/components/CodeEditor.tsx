@@ -24,6 +24,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({ language, code, onChange
           readOnly,
           wordWrap: 'on',
           scrollBeyondLastLine: false,
+          automaticLayout: true,
         }}
       />
     </div>

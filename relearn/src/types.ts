@@ -1,12 +1,22 @@
 export interface Diagnosis {
   is_correct: boolean;
   misconception: string | null;
+  specific_error?: string | null;
+  evidence?: string | null;
   explanation: string | null;
   intervention: string | null;
+  follow_up_question?: string | null;
+  confidence?: number | null;
+  next_step?: string | null;
 }
 
 export interface Attempt {
   id: string;
+  problemId?: string | null;
+  problemTitle?: string;
+  problemText?: string;
+  domain?: string;
+  language?: string;
   code: string;
   timestamp: Date;
   diagnosis: Diagnosis | null;
@@ -21,16 +31,18 @@ export interface LearnerModelStats {
   resolutionRate: number;
 }
 
-export type DomainType = 'programming' | 'algebra' | 'physics';
+export type DomainType = 'programming' | 'algebra' | 'physics' | 'mathematics' | 'chemistry' | 'logic' | 'other' | string;
 
 export interface Challenge {
   id: string;
-  domain: DomainType;
+  domain: string;
+  subdomain?: string;
   title: string;
   description: string;
   initialCode: string;
   language: string;
   concept: string;
+  isDemo?: boolean;
   resolutionChallengeId?: string;
   hints?: string[];
 }
@@ -38,7 +50,7 @@ export interface Challenge {
 export interface BenchmarkCase {
   id: string;
   title: string;
-  domain: DomainType;
+  domain: string;
   input: string;
   expectedIsCorrect: boolean;
   expectedMisconception: string;
