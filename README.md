@@ -1,12 +1,15 @@
 # Re:Learn 🧠⚡
 
-> **An AI-powered learning system that diagnoses underlying programming misconceptions rather than simply flagging code as incorrect.**
+> **An AI-powered learning system that diagnoses underlying cognitive misconceptions across programming, mathematics, physics, and STEM concepts rather than simply flagging code as incorrect.**
 
+🚀 **Live Deployment**: [https://bnb26-codeblooded-internal-round.vercel.app/](https://bnb26-codeblooded-internal-round.vercel.app/)
+
+[![Live Demo](https://img.shields.io/badge/Live_Demo-Vercel-black?style=for-the-badge&logo=vercel)](https://bnb26-codeblooded-internal-round.vercel.app/)
 [![Vite](https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white)](https://vitejs.dev/)
 [![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://react.dev/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
 [![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com/)
-[![Groq](https://img.shields.io/badge/Groq_API-F55036?style=for-the-badge&logo=fastapi&logoColor=white)](https://groq.com/)
+[![Google Gemini](https://img.shields.io/badge/Google_Gemini-4285F4?style=for-the-badge&logo=google&logoColor=white)](https://ai.google.dev/)
 
 ---
 
