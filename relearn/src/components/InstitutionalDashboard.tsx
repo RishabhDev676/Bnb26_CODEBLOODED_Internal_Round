@@ -46,22 +46,22 @@ export const InstitutionalDashboard: React.FC<InstitutionalDashboardProps> = ({ 
   };
 
   return (
-    <div className="fixed inset-0 bg-black/75 backdrop-blur-md z-50 flex items-center justify-center p-4 overflow-y-auto">
-      <div className="bg-[#0f141d] border border-gray-700/80 rounded-2xl w-full max-w-6xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden">
+    <div className="fixed inset-0 bg-black/75 backdrop-blur-md z-50 flex items-center justify-center p-2.5 sm:p-4 overflow-y-auto">
+      <div className="bg-[#0f141d] border border-gray-700/80 rounded-2xl w-full max-w-6xl shadow-2xl flex flex-col max-h-[92dvh] overflow-hidden">
         {/* Header */}
-        <div className="p-6 border-b border-gray-800 bg-[#151c28] flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-purple-950/80 border border-purple-700/60 flex items-center justify-center text-purple-300">
-              <GraduationCap className="w-6 h-6" />
+        <div className="p-4 sm:p-6 border-b border-gray-800 bg-[#151c28] flex flex-wrap sm:flex-nowrap justify-between items-center gap-2">
+          <div className="flex items-center gap-2.5 sm:gap-3">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-purple-950/80 border border-purple-700/60 flex items-center justify-center text-purple-300 flex-shrink-0">
+              <GraduationCap className="w-5 h-5 sm:w-6 sm:h-6" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-xl font-bold text-white">Institutional & Instructor Insights</h2>
+                <h2 className="text-lg sm:text-xl font-bold text-white">Institutional & Instructor Insights</h2>
                 <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded-full bg-purple-900/50 text-purple-300 border border-purple-700/50">
                   LTI 1.3 Ready
                 </span>
               </div>
-              <p className="text-xs text-gray-400">
+              <p className="text-[11px] sm:text-xs text-gray-400">
                 Cohort-wide Cognitive Misconception Telemetry for CS101 / Science Educators
               </p>
             </div>
@@ -75,38 +75,38 @@ export const InstitutionalDashboard: React.FC<InstitutionalDashboardProps> = ({ 
         </div>
 
         {/* Quick Cohort Stats */}
-        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 p-6 bg-[#0b0f16] border-b border-gray-800">
-          <div className="bg-gray-800/30 border border-gray-700/50 p-4 rounded-xl">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 p-4 sm:p-6 bg-[#0b0f16] border-b border-gray-800">
+          <div className="bg-gray-800/30 border border-gray-700/50 p-3.5 sm:p-4 rounded-xl">
             <span className="text-xs text-gray-400 font-semibold uppercase flex items-center gap-1.5">
               <Users className="w-3.5 h-3.5 text-blue-400" />
               Active Cohort Size
             </span>
-            <div className="text-2xl font-bold text-white mt-1">142 Students</div>
+            <div className="text-xl sm:text-2xl font-bold text-white mt-1">142 Students</div>
             <span className="text-[11px] text-gray-500">Introductory CS & STEM Section A</span>
           </div>
 
-          <div className="bg-gray-800/30 border border-gray-700/50 p-4 rounded-xl">
+          <div className="bg-gray-800/30 border border-gray-700/50 p-3.5 sm:p-4 rounded-xl">
             <span className="text-xs text-gray-400 font-semibold uppercase flex items-center gap-1.5">
               <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />
               Resolution Success Rate
             </span>
-            <div className="text-2xl font-bold text-emerald-400 mt-1">78.4%</div>
+            <div className="text-xl sm:text-2xl font-bold text-emerald-400 mt-1">78.4%</div>
             <span className="text-[11px] text-gray-500">Overcame initial diagnosed trap</span>
           </div>
 
-          <div className="bg-gray-800/30 border border-gray-700/50 p-4 rounded-xl">
+          <div className="bg-gray-800/30 border border-gray-700/50 p-3.5 sm:p-4 rounded-xl">
             <span className="text-xs text-gray-400 font-semibold uppercase flex items-center gap-1.5">
               <AlertOctagon className="w-3.5 h-3.5 text-amber-400" />
               Primary Class Bottleneck
             </span>
-            <div className="text-lg font-bold text-amber-300 mt-1 truncate">Assignment vs Equality</div>
+            <div className="text-base sm:text-lg font-bold text-amber-300 mt-1 truncate">Assignment vs Equality</div>
             <span className="text-[11px] text-gray-500">48 students triggered this error</span>
           </div>
 
           <div className="flex flex-col justify-center">
             <button
               onClick={handleExportLTI}
-              className="w-full bg-gradient-to-r from-purple-700 to-indigo-700 hover:from-purple-600 hover:to-indigo-600 text-white font-semibold py-3 px-4 rounded-xl transition-all shadow-lg shadow-purple-950/40 flex items-center justify-center gap-2 cursor-pointer text-xs"
+              className="w-full bg-gradient-to-r from-purple-700 to-indigo-700 hover:from-purple-600 hover:to-indigo-600 text-white font-semibold py-2.5 sm:py-3 px-4 rounded-xl transition-all shadow-lg shadow-purple-950/40 flex items-center justify-center gap-2 cursor-pointer text-xs"
             >
               <Download className="w-4 h-4" />
               <span>Export LTI 1.3 / CSV</span>
@@ -120,7 +120,7 @@ export const InstitutionalDashboard: React.FC<InstitutionalDashboardProps> = ({ 
         </div>
 
         {/* Main Dashboard Content */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 sm:space-y-6">
           {/* Lecture Adaptation Recommendation */}
           <div className="bg-gradient-to-r from-blue-950/30 via-indigo-950/30 to-purple-950/30 border border-blue-800/50 p-5 rounded-2xl relative overflow-hidden">
             <div className="flex items-start gap-3">
@@ -143,24 +143,24 @@ export const InstitutionalDashboard: React.FC<InstitutionalDashboardProps> = ({ 
           </div>
 
           {/* Grid: Misconception Heatmap & At-Risk Triage */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
             {/* Misconception Frequency Chart */}
-            <div className="bg-gray-800/20 border border-gray-800 p-5 rounded-2xl flex flex-col">
-              <h3 className="text-sm font-semibold text-gray-200 mb-4 flex items-center justify-between">
+            <div className="bg-gray-800/20 border border-gray-800 p-4 sm:p-5 rounded-2xl flex flex-col">
+              <h3 className="text-sm font-semibold text-gray-200 mb-3 sm:mb-4 flex items-center justify-between">
                 <span>Class-Wide Misconception Frequency</span>
                 <span className="text-xs text-gray-500 font-normal">Ranked by occurrences</span>
               </h3>
-              <div className="w-full h-[260px]">
+              <div className="w-full h-[200px] sm:h-[260px]">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={COHORT_MISCONCEPTIONS_DATA} layout="vertical" margin={{ left: 10 }}>
+                  <BarChart data={COHORT_MISCONCEPTIONS_DATA} layout="vertical" margin={{ left: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#252f3f" horizontal={false} />
                     <XAxis type="number" stroke="#9CA3AF" />
                     <YAxis 
                       dataKey="name" 
                       type="category" 
                       stroke="#9CA3AF" 
-                      width={170} 
-                      tick={{ fontSize: 11 }}
+                      width={140} 
+                      tick={{ fontSize: 10 }}
                     />
                     <Tooltip 
                       cursor={{ fill: '#1f2937' }}
@@ -173,8 +173,8 @@ export const InstitutionalDashboard: React.FC<InstitutionalDashboardProps> = ({ 
             </div>
 
             {/* Student Triage / Office Hours Alert */}
-            <div className="bg-gray-800/20 border border-gray-800 p-5 rounded-2xl flex flex-col">
-              <h3 className="text-sm font-semibold text-gray-200 mb-3 flex items-center justify-between">
+            <div className="bg-gray-800/20 border border-gray-800 p-4 sm:p-5 rounded-2xl flex flex-col">
+              <h3 className="text-sm font-semibold text-gray-200 mb-2 sm:mb-3 flex items-center justify-between">
                 <span>At-Risk Student Triage (Early Warning System)</span>
                 <span className="text-xs text-red-400 font-medium">3 Students Flagged</span>
               </h3>
@@ -185,18 +185,18 @@ export const InstitutionalDashboard: React.FC<InstitutionalDashboardProps> = ({ 
                 {AT_RISK_STUDENTS.map(s => (
                   <div 
                     key={s.id} 
-                    className="p-3 bg-gray-900/60 rounded-xl border border-gray-800/80 flex items-center justify-between text-xs"
+                    className="p-2.5 sm:p-3 bg-gray-900/60 rounded-xl border border-gray-800/80 flex items-center justify-between text-xs gap-2"
                   >
-                    <div>
+                    <div className="min-w-0">
                       <div className="font-semibold text-gray-200 flex items-center gap-2">
-                        <span>{s.name}</span>
-                        <span className="font-mono text-[10px] text-gray-500">{s.id}</span>
+                        <span className="truncate">{s.name}</span>
+                        <span className="font-mono text-[10px] text-gray-500 flex-shrink-0">{s.id}</span>
                       </div>
-                      <div className="text-[11px] text-gray-400 mt-0.5">
+                      <div className="text-[11px] text-gray-400 mt-0.5 truncate">
                         {s.status}
                       </div>
                     </div>
-                    <div className="text-right">
+                    <div className="text-right flex-shrink-0">
                       <span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
                         s.unresMisconceptions >= 3 
                           ? 'bg-red-950 text-red-300 border border-red-800' 
@@ -204,7 +204,7 @@ export const InstitutionalDashboard: React.FC<InstitutionalDashboardProps> = ({ 
                           ? 'bg-amber-950 text-amber-300 border border-amber-800' 
                           : 'bg-emerald-950 text-emerald-300 border border-emerald-800'
                       }`}>
-                        {s.unresMisconceptions} Traps ({s.attempts} attempts)
+                        {s.unresMisconceptions} Traps
                       </span>
                     </div>
                   </div>
@@ -215,14 +215,14 @@ export const InstitutionalDashboard: React.FC<InstitutionalDashboardProps> = ({ 
         </div>
 
         {/* Footer */}
-        <div className="p-4 bg-[#151c28] border-t border-gray-800 flex justify-between items-center text-xs text-gray-400">
+        <div className="p-3 sm:p-4 bg-[#151c28] border-t border-gray-800 flex flex-col sm:flex-row justify-between items-center gap-2 text-xs text-gray-400">
           <div className="flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-            <span>Telemetry aggregated in real time via PostgreSQL Row-Level Security</span>
+            <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+            <span className="text-center sm:text-left">Telemetry aggregated in real time via PostgreSQL Row-Level Security</span>
           </div>
           <button
             onClick={onClose}
-            className="px-4 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-200 rounded-lg transition-colors font-medium cursor-pointer"
+            className="w-full sm:w-auto px-4 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-200 rounded-lg transition-colors font-medium cursor-pointer"
           >
             Close Instructor View
           </button>

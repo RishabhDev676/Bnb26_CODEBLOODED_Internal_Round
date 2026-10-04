@@ -1,6 +1,8 @@
-# React + TypeScript + Vite
+# Re:Learn Frontend 🧠⚡
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+🚀 **Live Deployment**: [https://bnb26-codeblooded-internal-round.vercel.app/](https://bnb26-codeblooded-internal-round.vercel.app/)
+
+Adaptive Multimodal Cognitive Misconception Diagnosis & Resolution Engine.
 
 Currently, two official plugins are available:
 

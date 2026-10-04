@@ -118,22 +118,22 @@ export const ModelEvaluationModal: React.FC<ModelEvaluationModalProps> = ({ onCl
   const unseenAccuracy = unseenCases.length > 0 ? Math.round((unseenPassed / unseenCases.length) * 100) : 0;
 
   return (
-    <div className="fixed inset-0 bg-black/75 backdrop-blur-md z-50 flex items-center justify-center p-4 overflow-y-auto">
-      <div className="bg-[#111620] border border-gray-700/80 rounded-2xl w-full max-w-5xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden">
+    <div className="fixed inset-0 bg-black/75 backdrop-blur-md z-50 flex items-center justify-center p-2.5 sm:p-4 overflow-y-auto">
+      <div className="bg-[#111620] border border-gray-700/80 rounded-2xl w-full max-w-5xl shadow-2xl flex flex-col max-h-[92dvh] overflow-hidden">
         {/* Header */}
-        <div className="p-6 border-b border-gray-800 bg-[#161f2e] flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-indigo-600/30 border border-indigo-500/40 flex items-center justify-center text-indigo-400">
-              <Cpu className="w-5 h-5" />
+        <div className="p-4 sm:p-6 border-b border-gray-800 bg-[#161f2e] flex flex-wrap sm:flex-nowrap justify-between items-center gap-2">
+          <div className="flex items-center gap-2.5 sm:gap-3">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-indigo-600/30 border border-indigo-500/40 flex items-center justify-center text-indigo-400 flex-shrink-0">
+              <Cpu className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                Model Evaluation & Benchmark Suite
-                <span className="text-xs bg-indigo-950 text-indigo-300 border border-indigo-800 px-2 py-0.5 rounded-full font-mono">
+              <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2 flex-wrap">
+                <span>Model Evaluation & Benchmark Suite</span>
+                <span className="text-[10px] sm:text-xs bg-indigo-950 text-indigo-300 border border-indigo-800 px-2 py-0.5 rounded-full font-mono">
                   {customModelUrl ? 'FLAN-T5 (Colab ML)' : 'Cognitive ML Engine'}
                 </span>
               </h2>
-              <p className="text-xs text-gray-400">
+              <p className="text-[11px] sm:text-xs text-gray-400">
                 Evaluating diagnostic accuracy and differentiation on Seen vs Unseen misconceptions
               </p>
             </div>
@@ -147,7 +147,7 @@ export const ModelEvaluationModal: React.FC<ModelEvaluationModalProps> = ({ onCl
         </div>
 
         {/* Evaluation Metrics Bar */}
-        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 p-6 bg-[#0d121c] border-b border-gray-800">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 p-4 sm:p-6 bg-[#0d121c] border-b border-gray-800">
           <div className="bg-gray-800/40 border border-gray-700/50 p-4 rounded-xl">
             <span className="text-xs text-gray-400 uppercase font-semibold">Overall Diagnostic Accuracy</span>
             <div className="text-2xl font-bold text-white mt-1">
@@ -277,14 +277,14 @@ export const ModelEvaluationModal: React.FC<ModelEvaluationModalProps> = ({ onCl
         </div>
 
         {/* Footer info */}
-        <div className="p-4 bg-[#161f2e] border-t border-gray-800 flex justify-between items-center text-xs text-gray-400">
+        <div className="p-3 sm:p-4 bg-[#161f2e] border-t border-gray-800 flex flex-col sm:flex-row justify-between items-center gap-2 text-xs text-gray-400">
           <div className="flex items-center gap-2">
-            <ShieldCheck className="w-4 h-4 text-emerald-400" />
-            <span>Diagnostic validation against ground-truth misconception suite</span>
+            <ShieldCheck className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+            <span className="text-center sm:text-left">Diagnostic validation against ground-truth misconception suite</span>
           </div>
           <button
             onClick={onClose}
-            className="px-4 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-200 rounded-lg transition-colors font-medium cursor-pointer"
+            className="w-full sm:w-auto px-4 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-200 rounded-lg transition-colors font-medium cursor-pointer"
           >
             Close Evaluation
           </button>
