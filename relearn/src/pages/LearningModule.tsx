@@ -6,11 +6,11 @@ import { ModelEvaluationModal } from '../components/ModelEvaluationModal';
 import { InstitutionalDashboard } from '../components/InstitutionalDashboard';
 import { supabase } from '../lib/supabase';
 import { 
-  Play, Key, AlertTriangle, Activity, Code2, Image, 
+  Play, AlertTriangle, Activity, Code2, Image, 
   X, Cpu, Layers, Sparkles, ChevronRight, HelpCircle, GraduationCap, BrainCircuit
 } from 'lucide-react';
-import { diagnoseWithGemini, geminiKeyManager } from '../services/geminiService';
-import { CHALLENGES_CATALOG } from '../data/misconceptionsDataset';
+import { callGeminiLastResort } from '../services/geminiService';
+import { MISCONCEPTIONS_DICTIONARY, CHALLENGES_CATALOG } from '../data/misconceptionsDataset';
 import type { Attempt, LearnerModelStats, Diagnosis, Challenge, DomainType } from '../types';
 import confetti from 'canvas-confetti';
 import { WelcomeSplash } from '../components/WelcomeSplash';
@@ -333,13 +333,58 @@ export const LearningModule: React.FC = () => {
     resolutionRate: 0,
   });
 
-  const [keyCount, setKeyCount] = useState<number>(0);
-  const [currentKeyIndex, setCurrentKeyIndex] = useState<number>(0);
+  // Self-Learning Knowledge Base State
+  const [learnedCount, setLearnedCount] = useState<number>(() => {
+    try {
+      const stored = localStorage.getItem('relearn_learned_db');
+      return stored ? JSON.parse(stored).length : 0;
+    } catch {
+      return 0;
+    }
+  });
 
-  useEffect(() => {
-    setKeyCount(geminiKeyManager.getKeyCount());
-    setCurrentKeyIndex(geminiKeyManager.getCurrentKeyIndex());
-  }, []);
+  const learnFromMistake = (learnedCode: string, diagnosis: Diagnosis) => {
+    try {
+      const stored = localStorage.getItem('relearn_learned_db');
+      const db: { code: string; diagnosis: Diagnosis }[] = stored ? JSON.parse(stored) : [];
+      if (!db.some(e => e.code.trim() === learnedCode.trim())) {
+        db.push({ code: learnedCode.trim(), diagnosis });
+        localStorage.setItem('relearn_learned_db', JSON.stringify(db));
+        setLearnedCount(db.length);
+        console.log('[Self-Learning DB] New misconception pattern learned! Total patterns:', db.length);
+      }
+    } catch { /* non-fatal */ }
+  };
+
+  const lookupLearnedDB = (submittedCode: string): Diagnosis | null => {
+    try {
+      const stored = localStorage.getItem('relearn_learned_db');
+      if (!stored) return null;
+      const db: { code: string; diagnosis: Diagnosis }[] = JSON.parse(stored);
+      const match = db.find(e => e.code === submittedCode.trim());
+      return match ? match.diagnosis : null;
+    } catch { return null; }
+  };
+
+  const searchMisconceptionsDB = (ch: Challenge, submittedCode: string): Diagnosis | null => {
+    const cleanCode = submittedCode.toLowerCase();
+    for (const entry of MISCONCEPTIONS_DICTIONARY) {
+      if (entry.domain !== ch.domain && entry.domain !== 'general') continue;
+      const exampleHit = entry.commonExamples.some(ex =>
+        ex.toLowerCase().split(/\s+/).filter(w => w.length > 3).some(w => cleanCode.includes(w))
+      );
+      const patternHit = entry.pattern.toLowerCase().split(/\s+/).filter(w => w.length > 3).some(w => cleanCode.includes(w));
+      if (exampleHit || patternHit) {
+        return {
+          is_correct: false,
+          misconception: entry.title,
+          explanation: entry.description,
+          intervention: entry.interventionStrategy,
+        };
+      }
+    }
+    return null;
+  };
 
   // Sync code when challenge changes
   const handleSelectChallenge = (c: Challenge) => {
@@ -501,24 +546,59 @@ export const LearningModule: React.FC = () => {
         }
       }
 
-      // 2. Try Gemini API Pool
-      if (!result && geminiKeyManager.getKeyCount() > 0) {
-        result = await diagnoseWithGemini(
-          challenge.title,
-          challenge.description,
-          code,
-          challenge.language,
-          (notice) => {
-            setRotationMessage(notice);
-            setCurrentKeyIndex(geminiKeyManager.getCurrentKeyIndex());
-          },
-          attachedImage || undefined,
-          attachedImageMime
-        );
-        setCurrentKeyIndex(geminiKeyManager.getCurrentKeyIndex());
+      // ── TIER 2: Local Rule Engine + Learned Database + Misconceptions Dictionary ──
+      if (!result) {
+        // 2a. Check if we already learned this exact pattern from a previous mistake
+        const learnedMatch = lookupLearnedDB(code);
+        if (learnedMatch) {
+          console.log('[LearnDB] Exact pattern hit in learned database!');
+          result = learnedMatch;
+        }
+
+        // 2b. Challenge-specific + universal AST / regex rule engine
+        if (!result) {
+          result = evaluateChallengeLocally(challenge, code);
+        }
+
+        // 2c. If local check only returned generic fallback, search 50+ misconceptions catalog
+        const isGenericFallback = result && !result.is_correct && result.misconception === challenge.concept;
+        if (isGenericFallback) {
+          const dbMatch = searchMisconceptionsDB(challenge, code);
+          if (dbMatch) {
+            result = dbMatch;
+          }
+        }
       }
 
-      // 3. Fallback to local evaluation engine
+      // ── TIER 3: Gemini — LAST RESORT ONLY when code pattern is completely unknown ──
+      const isStillUnknown = result && !result.is_correct && result.misconception === challenge.concept;
+      if (!result || isStillUnknown) {
+        setRotationMessage('🔍 Unknown pattern — querying Gemini AI as last resort to identify misconception...');
+        try {
+          const geminiResult = await callGeminiLastResort(
+            challenge.title,
+            challenge.description,
+            code,
+            challenge.language,
+            attachedImage || undefined,
+            attachedImageMime
+          );
+          if (geminiResult) {
+            console.log('[Self-Learning AI] Received diagnosis from Gemini. Saving to database so model learns from mistake.');
+            result = geminiResult;
+            learnFromMistake(code, geminiResult); // Learn from mistake and expand DB!
+            setRotationMessage('🧠 Model learned new pattern! Stored in self-learning database.');
+            setTimeout(() => setRotationMessage(null), 4000);
+          } else {
+            setRotationMessage(null);
+          }
+        } catch (geminiErr) {
+          console.warn('[Gemini LastResort] Failed:', geminiErr);
+          setRotationMessage(null);
+        }
+      }
+
+      // Safety fallback: ensure a valid diagnosis object always exists
       if (!result) {
         result = evaluateChallengeLocally(challenge, code);
       }
@@ -624,15 +704,19 @@ export const LearningModule: React.FC = () => {
             <span className="text-amber-300 font-bold text-xs sm:text-sm tracking-wide">{xp} XP</span>
           </div>
 
-          {keyCount > 0 && (
-            <div className="flex items-center gap-1.5 text-xs bg-[#0b0f15] border border-gray-700/80 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-gray-300 flex-shrink-0">
-              <Key className="w-3.5 h-3.5 text-blue-400" />
-              <span className="hidden md:inline">Pool: <strong>{keyCount} Keys</strong></span>
-              <span className="text-emerald-400 font-mono text-[10px] sm:text-[11px] bg-emerald-950/60 border border-emerald-800/50 px-1.5 py-0.2 rounded">
-                #{currentKeyIndex + 1}
+          {/* Knowledge Base & Self-Learning Database Indicator */}
+          <div className="flex items-center gap-1.5 text-xs bg-[#0b0f15] border border-purple-800/40 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-gray-300 flex-shrink-0" title={`${MISCONCEPTIONS_DICTIONARY.length} curated patterns + ${learnedCount} dynamically learned patterns`}>
+            <BrainCircuit className="w-3.5 h-3.5 text-purple-400" />
+            <span className="hidden md:inline">Knowledge Base: <strong className="text-purple-300">{MISCONCEPTIONS_DICTIONARY.length + learnedCount} Patterns</strong></span>
+            <span className="md:hidden font-mono text-[11px] text-purple-300">
+              {MISCONCEPTIONS_DICTIONARY.length + learnedCount} DB
+            </span>
+            {learnedCount > 0 && (
+              <span className="text-emerald-400 font-mono text-[10px] sm:text-[11px] bg-emerald-950/60 border border-emerald-800/50 px-1.5 py-0.2 rounded" title="Patterns learned from past mistakes">
+                +{learnedCount} learned
               </span>
-            </div>
-          )}
+            )}
+          </div>
 
           {/* Connect Colab ML Model Button */}
           <button
@@ -880,7 +964,7 @@ export const LearningModule: React.FC = () => {
                       📷 Multimodal Handwritten Work Attached
                     </span>
                     <span className="text-[10px] sm:text-[11px] text-gray-400">
-                      Gemini will analyze your diagram / algebraic steps alongside code
+                      Multimodal engine will analyze your diagram / algebraic steps alongside code
                     </span>
                   </div>
                 </div>
