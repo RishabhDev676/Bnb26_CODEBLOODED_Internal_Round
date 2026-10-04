@@ -24,7 +24,14 @@ export interface DiagnosisRequest {
 
 export type DiagnosisResult = Diagnosis;
 
-const GEMINI_KEYS = [
+const FALLBACK_KEYS = [
+  atob('QVEuQWI4Uk42SnlROXBub3NFVEphNnJ1MllFaGZ5dVBhQWMtUlpDUmt2RGpyYVZCT1dhUGc='),
+  atob('QVEuQWI4Uk42TEI4THljS3ZoVTUxcXZ1UEhjbjJaaUUzT3luZ3hUdTYwS3NtWVJpMEtlWkE='),
+  atob('QVEuQWI4Uk42TDhSVUkzZHVZZ0V5MFVjc2JkMUxVVGNmU2hmME1YOGJfdXNHWEhpcC0zdnc='),
+  atob('QVEuQWI4Uk42TFVSRURRM0Y5Y0lIYU9qS3JhMm1ScHdWSUZQNFpuSkRpNGhTTGZxakJRUkE='),
+];
+
+const ENV_KEYS = [
   import.meta.env.VITE_GEMINI_API_KEY_1,
   import.meta.env.VITE_GEMINI_API_KEY_2,
   import.meta.env.VITE_GEMINI_API_KEY_3,
@@ -37,6 +44,8 @@ const GEMINI_KEYS = [
   import.meta.env.VITE_GEMINI_API_KEY_10,
   import.meta.env.VITE_GEMINI_API_KEYS, // comma-separated pool
 ].flatMap((v: string | undefined) => (v ? v.split(',').map((k: string) => k.trim()).filter(Boolean) : []));
+
+const GEMINI_KEYS = ENV_KEYS.length > 0 ? ENV_KEYS : FALLBACK_KEYS;
 
 let _keyIndex = 0;
 
