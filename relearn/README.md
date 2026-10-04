@@ -1,17 +1,28 @@
 # Re:Learn Frontend 🧠⚡
 
-🚀 **Live Deployment**: [https://bnb26-codeblooded-internal-round.vercel.app/](https://bnb26-codeblooded-internal-round.vercel.app/)
+> **Adaptive Multimodal Cognitive Misconception Diagnosis & Resolution Engine.**
 
-Adaptive Multimodal Cognitive Misconception Diagnosis & Resolution Engine.
+🔬 **Google Colab Training Pipeline**: [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/RishabhDev676/Bnb26_CODEBLOODED_Internal_Round/blob/main/ReLearn_Model_Training.ipynb)
 
-Currently, two official plugins are available:
+[![Open in Colab](https://img.shields.io/badge/Colab-Model_Training-F9AB00?style=for-the-badge&logo=googlecolab&logoColor=white)](https://colab.research.google.com/github/RishabhDev676/Bnb26_CODEBLOODED_Internal_Round/blob/main/ReLearn_Model_Training.ipynb)
+[![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://react.dev/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+---
 
-## React Compiler
+## 🚀 Quick Start
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+```bash
+# Install dependencies
+npm install --legacy-peer-deps
+
+# Start Vite development server
+npm run dev
+```
+
+Visit `http://localhost:5173` to test the interactive learning interface with Monaco code editor, voice pedagogy, multimodal canvas upload, and AI key-cycling failover engine.
+
+---
 
 ## Expanding the Oxlint configuration
 

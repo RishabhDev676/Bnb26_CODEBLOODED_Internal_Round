@@ -6,7 +6,7 @@ import type { Diagnosis } from '../types';
  * Accurately detects syntax errors, mental model bugs, and cognitive misconceptions
  * without requiring any specific challenge from the domain tree.
  */
-export function diagnoseCodeSemantically(code: string, problemDescription?: string): Diagnosis {
+export function diagnoseCodeSemantically(code: string, _problemDescription?: string): Diagnosis {
   const clean = code.replace(/\r/g, '').trim();
 
   // 1. Python 2 vs Python 3 Print Statement Syntax (e.g., `print banana`, `print "hello"`)

@@ -1,7 +1,6 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { CodeEditor } from '../components/CodeEditor';
 import { AIAssistantPanel } from '../components/AIAssistantPanel';
-import { getDomainThoughtSteps } from '../utils/thoughtSteps';
 import { LearnerAnalytics } from '../components/LearnerAnalytics';
 import { ModelEvaluationModal } from '../components/ModelEvaluationModal';
 import { InstitutionalDashboard } from '../components/InstitutionalDashboard';
@@ -10,11 +9,103 @@ import {
   Play, AlertTriangle, Activity, Code2, Image, 
   X, Cpu, Layers, Sparkles, ChevronRight, HelpCircle, GraduationCap, BrainCircuit
 } from 'lucide-react';
-import { callGeminiLastResort } from '../services/geminiService';
+import { diagnoseCognitiveMisconception } from '../services/geminiService';
 import { MISCONCEPTIONS_DICTIONARY, CHALLENGES_CATALOG } from '../data/misconceptionsDataset';
 import type { Attempt, LearnerModelStats, Diagnosis, Challenge, DomainType } from '../types';
 import confetti from 'canvas-confetti';
+import { WelcomeSplash } from '../components/WelcomeSplash';
 import { AnimatePresence } from 'framer-motion';
+
+export interface CustomPreset {
+  id: string;
+  name: string;
+  domain: string;
+  language: string;
+  concept: string;
+  title: string;
+  question: string;
+  initialWork: string;
+}
+
+export const CUSTOM_PRESETS: CustomPreset[] = [
+  {
+    id: 'preset-math-quadratic',
+    name: 'Algebra: Quadratic Factoring',
+    domain: 'mathematics',
+    language: 'markdown',
+    concept: 'Quadratic Equations & Factoring',
+    title: 'Factoring Quadratic Trinomial',
+    question: 'Solve x² - 5x + 6 = 0 by factoring. State the factored form and find all roots for x.',
+    initialWork: '# Problem: Solve x^2 - 5x + 6 = 0\n# Factored expression:\n(x - 2)(x + 3) = 0\n\n# Roots:\nx = 2 or x = -3\n'
+  },
+  {
+    id: 'preset-py-even',
+    name: 'Python: Even Parity Function',
+    domain: 'programming',
+    language: 'python',
+    concept: 'Arithmetic & Modulo Operations',
+    title: 'Even Number Parity Function',
+    question: 'Write a Python function called `is_even(n)` that returns True if the integer `n` is even, and False otherwise.',
+    initialWork: 'def is_even(n):\n    # Return True if number is even\n    if n / 2 == 0:\n        return True\n    return False\n'
+  },
+  {
+    id: 'preset-js-auth',
+    name: 'JavaScript: Auth Boolean Logic',
+    domain: 'programming',
+    language: 'javascript',
+    concept: 'Boolean Logic & Truthiness',
+    title: 'Strict Role Authentication Guard',
+    question: 'Write a JavaScript function `isAuthenticated(user)` that returns true if `user.isLoggedIn` and `user.role === "admin"`.',
+    initialWork: 'function isAuthenticated(user) {\n    // Check if user is logged in and is admin\n    if (user.isLoggedIn = true && user.role == "admin") {\n        return true;\n    }\n    return false;\n}\n'
+  },
+  {
+    id: 'preset-phys-accel',
+    name: 'Physics: Deceleration & Signs',
+    domain: 'physics',
+    language: 'markdown',
+    concept: 'Newtonian Kinematics & Signs',
+    title: 'Deceleration Vector Coordinates',
+    question: 'A 2 kg cart rolling forward at +10 m/s applies brakes and decelerates at 4 m/s² for 2 seconds. What is its acceleration vector a and final velocity v?',
+    initialWork: '# Problem Data:\n# v_initial = +10 m/s\n# Deceleration rate = 4 m/s^2\n# Since it is decelerating, acceleration is positive: a = +4 m/s^2\n# v_final = v_initial + a*t = 10 + (4)(2) = 18 m/s\n'
+  },
+  {
+    id: 'preset-chem-stoich',
+    name: 'Chemistry: Stoichiometry Moles',
+    domain: 'chemistry',
+    language: 'markdown',
+    concept: 'Stoichiometry & Molar Ratios',
+    title: 'Reaction Molar Yield',
+    question: 'How many moles of H₂O are produced when 4 moles of H₂ react with excess O₂ according to the equation 2H₂ + O₂ → 2H₂O?',
+    initialWork: '# Reaction: 2H2 + O2 -> 2H2O\n# Calculation:\n# Since 4 moles H2 react and formula has 2 moles,\n# Moles of H2O = 4 / 2 = 2 moles\n'
+  }
+];
+
+export const getFilenameForLanguage = (lang: string): string => {
+  switch (lang?.toLowerCase()) {
+    case 'javascript': return 'solution.js';
+    case 'typescript': return 'solution.ts';
+    case 'python': return 'solution.py';
+    case 'java': return 'Solution.java';
+    case 'cpp': case 'c++': return 'solution.cpp';
+    case 'c': return 'solution.c';
+    case 'sql': return 'query.sql';
+    case 'markdown': return 'solution.math';
+    default: return 'working.txt';
+  }
+};
+
+export const getMonacoLanguage = (lang: string): string => {
+  switch (lang?.toLowerCase()) {
+    case 'python': return 'python';
+    case 'javascript': return 'javascript';
+    case 'typescript': return 'typescript';
+    case 'java': return 'java';
+    case 'cpp': case 'c++': case 'c': return 'cpp';
+    case 'sql': return 'sql';
+    case 'markdown': return 'markdown';
+    default: return 'plaintext';
+  }
+};
 
 function evaluateChallengeLocally(challenge: Challenge, code: string): Diagnosis {
   const cleanCode = code.replace(/\r/g, '').trim();
@@ -285,223 +376,7 @@ function evaluateChallengeLocally(challenge: Challenge, code: string): Diagnosis
     };
   }
 
-  // 9. Mutable Default Parameter (Python)
-  if (challenge.id === 'ch-py-mutable-default' || challenge.id === 'ch-py-mutable-default-res') {
-    if (/container\s*=\s*None/i.test(cleanCode) || /if\s+container\s+is\s+None/i.test(cleanCode)) {
-      return {
-        is_correct: true,
-        misconception: null,
-        explanation: "Correct! Using None as the default sentinel pattern creates a fresh container on every call without cross-call contamination.",
-        intervention: null
-      };
-    }
-    if (/def\s+\w+\(.*=\s*\[\]\)/.test(cleanCode)) {
-      return {
-        is_correct: false,
-        misconception: "Mutable default argument state retention",
-        explanation: "In Python, default arguments are evaluated once at function definition time. The empty list [] is shared across all function calls.",
-        intervention: "Use 'container=None' and write 'if container is None: container = []' inside the function."
-      };
-    }
-  }
-
-  // 10. Loop Bounds (Python)
-  if (challenge.id === 'ch-py-loop-bounds' || challenge.id === 'ch-py-loop-bounds-res') {
-    if (/for\s+\w+\s+in\s+numbers\s*:/i.test(cleanCode) || /range\(\s*1\s*,\s*len\(numbers\)\s*\)/i.test(cleanCode) || /range\(\s*len\(numbers\)\s*\)/i.test(cleanCode)) {
-      return {
-        is_correct: true,
-        misconception: null,
-        explanation: "Perfect! You correctly respected 0-based indexing limits up to len(numbers) - 1.",
-        intervention: null
-      };
-    }
-    if (/range\(.*,\s*len\([^)]+\)\s*\+\s*1\s*\)/i.test(cleanCode)) {
-      return {
-        is_correct: false,
-        misconception: "Index out of bounds / range upper bound inclusive assumption",
-        explanation: "Python lists are 0-indexed up to len(numbers) - 1. range(1, len(numbers) + 1) attempts to access index len(numbers), raising an IndexError.",
-        intervention: "What is the highest valid index in a 3-element list? Remember range(start, stop) is exclusive of stop."
-      };
-    }
-  }
-
-  // 11. Async / Await (JavaScript)
-  if (challenge.id === 'ch-js-async-promise' || challenge.id === 'ch-js-async-promise-res') {
-    if (/await\s+/i.test(cleanCode)) {
-      return {
-        is_correct: true,
-        misconception: null,
-        explanation: "Great job! Awaiting the asynchronous API call unwrap the promise before accessing its properties.",
-        intervention: null
-      };
-    }
-    return {
-      is_correct: false,
-      misconception: "Missing await on async operation (Promise unwrapping omitted)",
-      explanation: "Without the 'await' keyword, calling an async function immediately returns a pending Promise object, not the resolved data payload.",
-      intervention: "Which JavaScript keyword halts execution until a Promise resolves before accessing its data?"
-    };
-  }
-
-  // 12. Negative Sign Distribution (Algebra)
-  if (challenge.id === 'ch-alg-negative-dist' || challenge.id === 'ch-alg-negative-dist-res') {
-    if (/-3x\s*\+\s*12/i.test(cleanCode) || /12\s*-\s*3x/i.test(cleanCode) || /-8x\s*\+\s*18/i.test(cleanCode) || /18\s*-\s*8x/i.test(cleanCode)) {
-      return {
-        is_correct: true,
-        misconception: null,
-        explanation: "Excellent! You properly distributed the negative factor to both terms inside the parentheses: 5 - 3x + 7 = 12 - 3x.",
-        intervention: null
-      };
-    }
-    if (/-3x\s*-\s*2/i.test(cleanCode) || /-7/.test(cleanCode)) {
-      return {
-        is_correct: false,
-        misconception: "Sign Distribution Error (Negative multiplier omitted on second term)",
-        explanation: "When subtracting (3x - 7), the negative sign applies to both terms: -(3x) + (-(-7)) = -3x + 7. The constant is 5 + 7 = 12, not 5 - 7.",
-        intervention: "Rewrite -(3x - 7) as (-1) * (3x) + (-1) * (-7). What is (-1) * (-7)?"
-      };
-    }
-  }
-
-  // 13. Rational Fractions (Algebra)
-  if (challenge.id === 'ch-alg-rational-fractions' || challenge.id === 'ch-alg-rational-fractions-res') {
-    if (/5x\s*\+\s*2/i.test(cleanCode) || /\(5x\s*\+\s*2\)\s*\/\s*x\(x\s*\+\s*1\)/i.test(cleanCode) || /\(b\s*\+\s*a\)\s*\/\s*\(a\s*\*\s*b\)/i.test(cleanCode)) {
-      return {
-        is_correct: true,
-        misconception: null,
-        explanation: "Superb! You correctly identified the common denominator x(x + 1) and cross-multiplied: 2(x + 1) + 3x = 5x + 2.",
-        intervention: null
-      };
-    }
-    if (/5\s*\/\s*\(2x\s*\+\s*1\)/i.test(cleanCode) || /5\s*\/\s*2x/i.test(cleanCode)) {
-      return {
-        is_correct: false,
-        misconception: "Direct Addition of Numerators and Denominators",
-        explanation: "Fractions cannot be added by directly summing their numerators and denominators: (a/b) + (c/d) ≠ (a+c)/(b+d). You must find a common denominator first.",
-        intervention: "What is the common multiple of denominators x and (x + 1)? Multiply each fraction by 1 in the form of the missing factor."
-      };
-    }
-  }
-
-  // 14. Freefall Mass Independence (Physics)
-  if (challenge.id === 'ch-phys-freefall-mass' || challenge.id === 'ch-phys-freefall-mass-res') {
-    if (/same|simultaneous|together|cancels|independent/i.test(cleanCode) && !/heavier.*faster/i.test(cleanCode)) {
-      return {
-        is_correct: true,
-        misconception: null,
-        explanation: "Physics confirmed! Because a = F/m = (mg)/m = g, acceleration in a vacuum is completely independent of mass. Both objects land at the exact same instant.",
-        intervention: null
-      };
-    }
-    if (/heavier|20kg|lands first|faster/i.test(cleanCode)) {
-      return {
-        is_correct: false,
-        misconception: "Mass-Dependent Gravitational Acceleration Fallacy",
-        explanation: "While gravitational force F = mg is greater on the heavier object, its inertia (resistance to acceleration) is also proportionally greater: a = F/m = (mg)/m = g.",
-        intervention: "Newton's Second Law says a = F / m. If F = m * g, what is a? Does mass remain in the formula?"
-      };
-    }
-  }
-
-  // 15. Normal Force on Ramp (Physics)
-  if (challenge.id === 'ch-phys-normal-incline' || challenge.id === 'ch-phys-normal-incline-res') {
-    if (/cos\s*\(\s*theta\s*\)|cos\s*θ|m\s*\*\s*g\s*\*\s*cos/i.test(cleanCode)) {
-      return {
-        is_correct: true,
-        misconception: null,
-        explanation: "Correct! On an inclined plane, the normal force balances the perpendicular component of gravity: N = mg cos(θ).",
-        intervention: null
-      };
-    }
-    if (/N\s*=\s*m\s*\*\s*g/i.test(cleanCode) && !/cos/i.test(cleanCode)) {
-      return {
-        is_correct: false,
-        misconception: "Normal Force Equals Weight (N = mg) Assumption",
-        explanation: "Normal force is the perpendicular contact force from the surface. On an angle θ, only the perpendicular component mg cos(θ) acts against the ramp, while mg sin(θ) accelerates the block down the ramp.",
-        intervention: "Resolve the weight vector into components parallel and perpendicular to the inclined ramp. Which trigonometric function represents the adjacent/perpendicular component?"
-      };
-    }
-  }
-
-  // 16. Global Variable Scope & UnboundLocalError (Python)
-  if (challenge.id === 'ch-py-global-scope') {
-    if (/global\s+counter/i.test(cleanCode)) {
-      return {
-        is_correct: true,
-        misconception: null,
-        explanation: "Mastery achieved! Declaring 'global counter' informs Python that assignments to 'counter' target the module-level variable rather than binding a new local scope.",
-        intervention: null
-      };
-    }
-    if (/counter\s*=\s*counter\s*\+\s*1|counter\s*\+=\s*1/.test(cleanCode)) {
-      return {
-        is_correct: false,
-        misconception: "UnboundLocalError from Missing 'global' Declaration",
-        explanation: "Assigning to 'counter' inside increment() makes Python treat it as a local variable. Since it hasn't been defined locally before being read, it triggers UnboundLocalError.",
-        intervention: "Add 'global counter' at the top of the function to modify the global variable."
-      };
-    }
-  }
-
-  // 17. Mutating List During Iteration (Python)
-  if (challenge.id === 'ch-py-mutate-iter') {
-    if (/nums\[\:\]|list\(nums\)|\.copy\(\)|\[\s*x\s+for\s+x\s+in\s+nums\s+if/i.test(cleanCode)) {
-      return {
-        is_correct: true,
-        misconception: null,
-        explanation: "Mastery achieved! Iterating over a copy (nums[:]) or using a list comprehension avoids mutation index-shifting bugs.",
-        intervention: null
-      };
-    }
-    if (/for\s+\w+\s+in\s+nums\s*:[\s\S]*nums\.(remove|pop)\(/i.test(cleanCode)) {
-      return {
-        is_correct: false,
-        misconception: "Mutating Collection During Iteration",
-        explanation: "Modifying nums with .remove() or .pop() while iterating over it shifts indices dynamically, causing Python to skip elements silently.",
-        intervention: "Iterate over a copy 'for x in nums[:]:' or return a list comprehension '[x for x in nums if x % 2 != 0]'."
-      };
-    }
-  }
-
-  // 18. Recursive Factorial Base Case (Python)
-  if (challenge.id === 'ch-py-recursion-base') {
-    if (/if\s+n\s*(<=|<|==)\s*1\s*:\s*return\s+1/i.test(cleanCode) || /return\s+1\s+if\s+n\s*(<=|<|==)\s*1/i.test(cleanCode)) {
-      return {
-        is_correct: true,
-        misconception: null,
-        explanation: "Mastery achieved! You provided a clean base case (if n <= 1: return 1) allowing the recursion stack to unwind correctly.",
-        intervention: null
-      };
-    }
-    return {
-      is_correct: false,
-      misconception: "Missing Recursion Base Case (Infinite Recursion)",
-      explanation: "Without a terminating base condition (e.g., if n <= 1: return 1), the recursive calls never stop, leading to a RecursionError: maximum recursion depth exceeded.",
-      intervention: "Define when the function should stop recursing: if n <= 1: return 1."
-    };
-  }
-
-  // 19. Floating Point Precision Equality (Python)
-  if (challenge.id === 'ch-py-float-precision') {
-    if (/math\.isclose|isclose|abs\(\s*\(?\s*a\s*\+\s*b\s*\)?\s*-\s*expected\s*\)\s*<\s*1e-9|abs\(\s*\(?\s*a\s*\+\s*b\s*\)?\s*-\s*0\.3\s*\)\s*<\s*1e-9/i.test(cleanCode)) {
-      return {
-        is_correct: true,
-        misconception: null,
-        explanation: "Mastery achieved! You used tolerance/delta comparison (abs(diff) < 1e-9 or math.isclose) to bypass IEEE-754 precision limits.",
-        intervention: null
-      };
-    }
-    if (/==\s*(?:expected|0\.3)/i.test(cleanCode)) {
-      return {
-        is_correct: false,
-        misconception: "Floating-Point Precision Equality Assumption",
-        explanation: "In binary floating-point arithmetic (IEEE-754), 0.1 + 0.2 evaluates to 0.30000000000000004. Comparing directly with '==' fails.",
-        intervention: "Use an epsilon tolerance check: abs((a + b) - expected) < 1e-9, or import math and use math.isclose()."
-      };
-    }
-  }
-
-  // Generic fallback (unknown code pattern for this challenge)
+  // â”€â”€ Generic fallback (unknown code pattern for this challenge) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   return {
     is_correct: false,
     misconception: challenge.concept,
@@ -511,6 +386,7 @@ function evaluateChallengeLocally(challenge: Challenge, code: string): Diagnosis
 }
 
 export const LearningModule: React.FC = () => {
+  const [selectedDomain, setSelectedDomain] = useState<DomainType | 'all'>('all');
   const [challenge, setChallenge] = useState<Challenge>(CHALLENGES_CATALOG[0]);
   const [code, setCode] = useState<string>(challenge.initialCode);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -520,7 +396,7 @@ export const LearningModule: React.FC = () => {
   const [showInstructor, setShowInstructor] = useState(false);
   const [rotationMessage, setRotationMessage] = useState<string | null>(null);
   const [xp, setXp] = useState(0);
-  const [hasStarted, setHasStarted] = useState(true);
+  const [hasStarted, setHasStarted] = useState(false);
   const [mobileTab, setMobileTab] = useState<'problem' | 'editor' | 'assistant'>('editor');
 
   // Problem Mode: 'demo' (existing catalog) vs 'custom' (enter any problem)
@@ -533,101 +409,11 @@ export const LearningModule: React.FC = () => {
     concept: 'Quadratic Equations & Factoring'
   });
 
-  // Branched Menu Tree for Domains & Challenges
-  const branchedMenuItems: BranchedMenuItem[] = useMemo(() => [
-    {
-      label: 'Free Input',
-      children: [
-        {
-          value: 'ch-free-input-sandbox',
-          label: 'Custom Problem Sandbox',
-          icon: Rocket01Icon
-        },
-        {
-          value: 'ch-free-input-blank',
-          label: 'Blank Freeform Editor',
-          icon: SourceCodeIcon
-        }
-      ]
-    },
-    {
-      label: 'Programming',
-      children: CHALLENGES_CATALOG.filter(c => c.domain === 'programming' && !c.id.startsWith('ch-free')).map(c => ({
-        value: c.id,
-        label: c.title.replace(/^\d+\.\s*/, ''),
-        icon: c.id.includes('resolution') ? Rocket01Icon : SourceCodeIcon
-      }))
-    },
-    {
-      label: 'Algebra',
-      children: CHALLENGES_CATALOG.filter(c => c.domain === 'algebra').map(c => ({
-        value: c.id,
-        label: c.title.replace(/^\d+\.\s*/, ''),
-        icon: c.id.includes('resolution') ? Rocket01Icon : FunctionSquareIcon
-      }))
-    },
-    {
-      label: 'Physics',
-      children: CHALLENGES_CATALOG.filter(c => c.domain === 'physics').map(c => ({
-        value: c.id,
-        label: c.title.replace(/^\d+\.\s*/, ''),
-        icon: c.id.includes('resolution') ? Rocket01Icon : Atom01Icon
-      }))
-    }
-  ], []);
-
-  // Custom Colab ML Model Endpoint State (Connected to user Cloudflare tunnel by default)
-  const DEFAULT_MODEL_URL = 'https://chronic-wisconsin-belief-reflect.trycloudflare.com';
-  const [customModelUrl, setCustomModelUrl] = useState<string>(() => {
-    const saved = localStorage.getItem('relearn_model_url');
-    return (saved && saved.trim()) ? saved.trim() : DEFAULT_MODEL_URL;
-  });
+  // Custom Colab ML Model Endpoint State
+  const [customModelUrl, setCustomModelUrl] = useState<string>(() => localStorage.getItem('relearn_model_url') || '');
   const [showModelConfig, setShowModelConfig] = useState(false);
   const [tempModelUrl, setTempModelUrl] = useState(customModelUrl);
   const [modelTestStatus, setModelTestStatus] = useState<string | null>(null);
-
-  // GooeyNav top bar items with existing cyber theme colors
-  const gooeyNavItems: GooeyNavItem[] = useMemo(() => [
-    {
-      label: customModelUrl ? 'Colab Active' : 'Colab Model',
-      icon: <Cpu className={`w-3.5 h-3.5 ${customModelUrl ? 'text-emerald-400' : 'text-indigo-400'}`} />,
-      badge: (
-        <span
-          className={`inline-block w-1.5 h-1.5 rounded-full ${
-            customModelUrl ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'
-          }`}
-        />
-      ),
-      onClick: () => {
-        setTimeout(() => {
-          setTempModelUrl(customModelUrl);
-          setModelTestStatus(null);
-          setShowModelConfig(true);
-        }, 1000);
-      }
-    },
-    {
-      label: 'Model Benchmark',
-      icon: <Cpu className="w-3.5 h-3.5 text-cyan-400" />,
-      onClick: () => {
-        setTimeout(() => setShowEvaluation(true), 1000);
-      }
-    },
-    {
-      label: 'Learner Model',
-      icon: <Activity className="w-3.5 h-3.5 text-indigo-400" />,
-      onClick: () => {
-        setTimeout(() => setShowAnalytics(true), 1000);
-      }
-    },
-    {
-      label: 'Instructor View',
-      icon: <GraduationCap className="w-3.5 h-3.5 text-purple-400" />,
-      onClick: () => {
-        setTimeout(() => setShowInstructor(true), 1000);
-      }
-    }
-  ], [customModelUrl]);
 
   // Multimodal image attachment state
   const [attachedImage, setAttachedImage] = useState<string | null>(null);
@@ -790,30 +576,14 @@ export const LearningModule: React.FC = () => {
     }));
   }, [attempts]);
 
-  // Handle image upload for handwritten math/physics working or code screenshots
+  // Handle image upload for handwritten math/physics working
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const mime = file.type || 'image/jpeg';
-      setAttachedImageMime(mime);
+      setAttachedImageMime(file.type || 'image/jpeg');
       const reader = new FileReader();
-      reader.onload = async () => {
-        const base64 = reader.result as string;
-        setAttachedImage(base64);
-        setRotationMessage('📷 Reading image and transcribing code...');
-        try {
-          const ocrText = await extractCodeFromImage(base64, mime);
-          if (ocrText && ocrText.trim()) {
-            setCode(ocrText.trim());
-            setRotationMessage('✅ Image transcribed into code editor! Review code or click Run / Submit for diagnosis.');
-            setTimeout(() => setRotationMessage(null), 6000);
-          } else {
-            setRotationMessage(null);
-          }
-        } catch (err) {
-          console.warn('[OCR Transcription Failed]', err);
-          setRotationMessage(null);
-        }
+      reader.onload = () => {
+        setAttachedImage(reader.result as string);
       };
       reader.readAsDataURL(file);
     }
@@ -831,6 +601,14 @@ export const LearningModule: React.FC = () => {
     setRotationMessage(null);
     setMobileTab('assistant');
 
+    const submittedCode = code;
+    const currentProblemText = problemMode === 'custom'
+      ? (customProblem.question?.trim() || customProblem.title || 'Custom Problem')
+      : (challenge.description || challenge.title);
+    const currentDomain = problemMode === 'custom' ? customProblem.domain : challenge.domain;
+    const currentLanguage = problemMode === 'custom' ? customProblem.language : challenge.language;
+    const currentTitle = problemMode === 'custom' ? (customProblem.title || 'Custom Problem') : challenge.title;
+
     const newAttempt: Attempt = {
       id: Date.now().toString(),
       problemId: problemMode === 'demo' ? challenge.id : null,
@@ -843,42 +621,14 @@ export const LearningModule: React.FC = () => {
       status: 'analyzing',
       diagnosis: null,
       imageBase64: attachedImage || undefined,
-      thoughtSteps,
     };
 
     setAttempts([newAttempt]);
 
     try {
-      // 1. Validation check: If input is not recognized (e.g. just a random sentence)
-      if (isRandomSentence(code)) {
-        const elapsedMs = Date.now() - startTime;
-        if (elapsedMs < 1200) {
-          await new Promise(resolve => setTimeout(resolve, 1200 - elapsedMs));
-        }
-        const sentenceResult: Diagnosis = {
-          is_correct: false,
-          misconception: "Invalid Submission Format",
-          explanation: "Please give a proper submission, not just a sentence.",
-          intervention: "Provide functional code, an algorithm, or a mathematical formula to diagnose."
-        };
-        setAttempts(prev => prev.map(a => a.id === newAttempt.id ? { 
-          ...a, 
-          status: 'analyzed', 
-          diagnosis: sentenceResult,
-          thoughtSteps: [
-            'Reading submission input & analyzing structure',
-            'Evaluating syntax & programming tokens',
-            'Unrecognized submission: natural language sentence detected'
-          ],
-          thoughtTime: 1.2
-        } : a));
-        setIsSubmitting(false);
-        return;
-      }
-
       let result: Diagnosis | null = null;
 
-      // 1. Try Custom Trained Model (Google Colab / FastAPI)
+      // ── TIER 1: Custom Colab ML Model (if tunnel active) ──
       if (customModelUrl.trim()) {
         try {
           const endpoint = customModelUrl.trim().replace(/\/$/, '') + '/diagnose';
@@ -891,145 +641,176 @@ export const LearningModule: React.FC = () => {
               'ngrok-skip-browser-warning': 'true',
             },
             body: JSON.stringify({
-              problem: challenge.description || challenge.title,
-              code
+              problem: currentProblemText,
+              code: submittedCode,
+              domain: currentDomain,
+              language: currentLanguage,
+              image: attachedImage || null
             })
           });
           if (resp.ok) {
             const data = await resp.json();
-            console.log('Model Response from Colab:', data);
+            console.log('[Colab API] Response:', data);
 
-            // Ground-truth correctness gate: the local rule engine knows definitively
-            // when code is correct (e.g. bitwise even check, strict ===, etc.)
-            const localCheck = evaluateChallengeLocally(challenge, code);
+            let isCorrect = Boolean(data.is_correct);
+            let misconception = typeof data.misconception === 'string' && data.misconception.trim() ? data.misconception.trim() : null;
+            let explanation = typeof data.explanation === 'string' && data.explanation.trim() ? data.explanation.trim() : null;
+            let intervention = typeof data.intervention === 'string' && data.intervention.trim() ? data.intervention.trim() : null;
 
-            // If local check says correct, trust it immediately â€” model cannot override a correct solution
-            if (localCheck.is_correct) {
-              result = localCheck;
-            } else {
-              // Extract structured fields from model response
-              // Support both flat JSON and nested { raw_output: "..." } from Colab
-              let isCorrect = Boolean(data.is_correct);
-              let misconception: string | null = typeof data.misconception === 'string' && data.misconception.trim() ? data.misconception.trim() : null;
-              let explanation: string | null = typeof data.explanation === 'string' && data.explanation.trim() ? data.explanation.trim() : null;
-              let intervention: string | null = typeof data.intervention === 'string' && data.intervention.trim() ? data.intervention.trim() : null;
-
-              // Handle raw_output fallback (some Colab models emit: { raw_output: '<json string>' })
-              const rawStr: string | null = typeof data.raw_output === 'string' ? data.raw_output : (typeof data === 'string' ? data : null);
-              if (rawStr) {
-                try {
-                  // Attempt full JSON parse of raw_output first (structured Colab output)
-                  const parsedRaw = JSON.parse(rawStr);
-                  if (parsedRaw.is_correct !== undefined) isCorrect = Boolean(parsedRaw.is_correct);
-                  if (parsedRaw.misconception) misconception = String(parsedRaw.misconception).trim() || misconception;
-                  if (parsedRaw.explanation) explanation = String(parsedRaw.explanation).trim() || explanation;
-                  if (parsedRaw.intervention) intervention = String(parsedRaw.intervention).trim() || intervention;
-                } catch {
-                  // Regex extraction fallback for plain-text raw_output
-                  if (/"is_correct":\s*true/i.test(rawStr)) isCorrect = true;
-                  const miscMatch = rawStr.match(/"misconception":\s*"([^"]+)"/i);
-                  if (miscMatch) misconception = miscMatch[1];
-                  const expMatch = rawStr.match(/"explanation":\s*"([^"]+)"/i);
-                  if (expMatch) explanation = expMatch[1];
-                  const intMatch = rawStr.match(/"intervention":\s*"([^"]+)"/i);
-                  if (intMatch) intervention = intMatch[1];
-                }
+            const rawStr = typeof data.raw_output === 'string' ? data.raw_output : (typeof data === 'string' ? data : null);
+            if (rawStr) {
+              try {
+                const parsedRaw = JSON.parse(rawStr);
+                if (parsedRaw.is_correct !== undefined) isCorrect = Boolean(parsedRaw.is_correct);
+                if (parsedRaw.misconception) misconception = String(parsedRaw.misconception).trim() || misconception;
+                if (parsedRaw.explanation) explanation = String(parsedRaw.explanation).trim() || explanation;
+                if (parsedRaw.intervention) intervention = String(parsedRaw.intervention).trim() || intervention;
+              } catch {
+                if (/"is_correct":\s*true/i.test(rawStr)) isCorrect = true;
+                const miscMatch = rawStr.match(/"misconception":\s*"([^"]+)"/i);
+                if (miscMatch) misconception = miscMatch[1];
+                const expMatch = rawStr.match(/"explanation":\s*"([^"]+)"/i);
+                if (expMatch) explanation = expMatch[1];
+                const intMatch = rawStr.match(/"intervention":\s*"([^"]+)"/i);
+                if (intMatch) intervention = intMatch[1];
               }
+            }
 
-              // Reject trivial / garbage model outputs (model not generating useful text yet)
-              const TRIVIAL = new Set(['false', 'true', 'none', 'null', 'undefined', '']);
-              const isTrivialExp = !explanation || TRIVIAL.has(explanation.toLowerCase()) || explanation.trim().length < 15;
-              const isTrivialMisc = !misconception || TRIVIAL.has(misconception.toLowerCase()) || misconception.trim().length < 3;
+            const TRIVIAL = new Set(['false', 'true', 'none', 'null', 'undefined', '']);
+            const isTrivialExp = !explanation || TRIVIAL.has(explanation.toLowerCase()) || explanation.trim().length < 15;
+            const isTrivialMisc = !misconception || TRIVIAL.has(misconception.toLowerCase()) || misconception.trim().length < 3;
 
-              if (isTrivialExp && isTrivialMisc) {
-                // Model output is garbage — fall back to local rule engine which now catches
-                // universal patterns (built-in shadowing, etc.) BEFORE challenge-specific fallbacks
-                result = localCheck;
-              } else {
-                // Model provided substantive output — prefer it, fill any missing fields from localCheck
-                result = {
-                  is_correct: isCorrect,
-                  misconception: (!isTrivialMisc ? misconception : null) ?? localCheck.misconception ?? 'Logical Misconception Detected',
-                  explanation: (!isTrivialExp ? explanation : null) ?? localCheck.explanation,
-                  intervention: intervention || localCheck.intervention
-                };
-              }
+            if (!isTrivialExp || !isTrivialMisc || isCorrect) {
+              result = {
+                is_correct: isCorrect,
+                misconception: isCorrect ? null : ((!isTrivialMisc ? misconception : null) ?? 'Logical Misconception Detected'),
+                explanation: (!isTrivialExp ? explanation : null) ?? (isCorrect ? 'Solution is logically sound!' : 'Review your reasoning steps.'),
+                intervention: isCorrect ? null : intervention
+              };
             }
           }
         } catch (colabErr) {
-          console.warn('Custom Colab model failed, using fallback:', colabErr);
+          console.error('[Colab API] Failed:', colabErr);
         }
       }
 
-      // ── TIER 2: Local Rule Engine + Learned Database + Misconceptions Dictionary ──
+      // ── TIER 2: General Pedagogical AI Engine (Gemini Multi-Modal Vision & Reasoning) ──
       if (!result) {
-        // 2a. Check if we already learned this exact pattern from a previous mistake
-        const learnedMatch = lookupLearnedDB(code);
+        try {
+          console.log('[Pedagogical AI] Querying Universal Cognitive Engine via Gemini...');
+          const aiResult = await diagnoseCognitiveMisconception({
+            problemTitle: currentTitle,
+            problemText: currentProblemText,
+            studentWork: submittedCode,
+            domain: currentDomain,
+            language: currentLanguage,
+            imageBase64: attachedImage || undefined,
+            imageMimeType: attachedImageMime,
+            previousAttempts: attempts.map(a => ({ code: a.code, misconception: a.diagnosis?.misconception }))
+          });
+
+          if (aiResult) {
+            console.log('[Pedagogical AI] Diagnosis successfully generated:', aiResult);
+            result = aiResult;
+            const cacheKey = problemMode === 'demo' ? challenge.id : 'custom';
+            learnFromMistake(cacheKey, submittedCode, result);
+          }
+        } catch (aiErr) {
+          console.error('[Pedagogical AI] Universal Engine error:', aiErr);
+        }
+      }
+
+      // ── TIER 3: Local Learned Knowledge Base ──
+      if (!result) {
+        const cacheKey = problemMode === 'demo' ? challenge.id : 'custom';
+        const learnedMatch = lookupLearnedDB(cacheKey, submittedCode);
         if (learnedMatch) {
           console.log('[LearnDB] Exact pattern hit in learned database!');
           result = learnedMatch;
         }
-
-        // 2b. Challenge-specific + universal AST / regex rule engine
-        if (!result) {
-          result = evaluateChallengeLocally(challenge, code);
-        }
-
-        // 2c. If local check only returned generic fallback, search 50+ misconceptions catalog
-        const isGenericFallback = result && !result.is_correct && result.misconception === challenge.concept;
-        if (isGenericFallback) {
-          const dbMatch = searchMisconceptionsDB(challenge, code);
-          if (dbMatch) {
-            result = dbMatch;
-          }
-        }
       }
 
-      // ── TIER 3: Gemini — LAST RESORT ONLY when code pattern is completely unknown ──
-      const isStillUnknown = result && !result.is_correct && result.misconception === challenge.concept;
-      if (!result || isStillUnknown) {
-        setRotationMessage('🔍 Unknown pattern — querying Gemini AI as last resort to identify misconception...');
-        try {
-          const geminiResult = await callGeminiLastResort(
-            challenge.title,
-            challenge.description,
-            code,
-            challenge.language,
-            attachedImage || undefined,
-            attachedImageMime
-          );
-          if (geminiResult) {
-            console.log('[Self-Learning AI] Received diagnosis from Gemini. Saving to database so model learns from mistake.');
-            result = geminiResult;
-            learnFromMistake(code, geminiResult); // Learn from mistake and expand DB!
-            setRotationMessage('🧠 Model learned new pattern! Stored in self-learning database.');
-            setTimeout(() => setRotationMessage(null), 4000);
-          } else {
-            setRotationMessage(null);
-          }
-        } catch (geminiErr) {
-          console.warn('[Gemini LastResort] Failed:', geminiErr);
-          setRotationMessage(null);
-        }
-      }
-
-      // Safety fallback: ensure a valid diagnosis object always exists
+      // ── TIER 4: Misconceptions Catalog Semantic Match ──
       if (!result) {
-        result = evaluateChallengeLocally(challenge, code);
+        const currentChallengeObj: Challenge = {
+          id: problemMode === 'demo' ? challenge.id : 'custom',
+          domain: currentDomain,
+          title: currentTitle,
+          description: currentProblemText,
+          initialCode: submittedCode,
+          language: currentLanguage,
+          concept: problemMode === 'demo' ? challenge.concept : (customProblem.concept || 'General Problem Solving')
+        };
+        const dbMatch = searchMisconceptionsDB(currentChallengeObj, submittedCode);
+        if (dbMatch) {
+          result = dbMatch;
+        }
       }
 
-      if (result) {
-        setAttempts(prev => prev.map(a => a.id === newAttempt.id ? { ...a, status: 'analyzed', diagnosis: result } : a));
-
-        if (result.is_correct) {
-          setXp(prev => prev + 100);
-          confetti({
-            particleCount: 150,
-            spread: 70,
-            origin: { y: 0.6 },
-            colors: ['#3B82F6', '#8B5CF6', '#10B981']
-          });
+      // ── TIER 5: Fallback Rule / Safety Engine ──
+      if (!result) {
+        if (problemMode === 'demo') {
+          result = evaluateChallengeLocally(challenge, submittedCode);
+        } else {
+          result = {
+            is_correct: false,
+            misconception: "Conceptual Inconsistency Detected",
+            explanation: `Review your solution steps for: "${currentProblemText}". Ensure your formula, syntax, or reasoning steps align with the underlying principles.`,
+            intervention: "Try tracing your steps one by one or attach a diagram/working sheet to pinpoint where the logic deviates."
+          };
         }
+      }
+
+      const finalDiagnosis: Diagnosis = {
+        is_correct: Boolean(result.is_correct),
+        misconception: result.is_correct ? null : (result.misconception || 'Logical Misconception Detected'),
+        specific_error: result.specific_error || null,
+        evidence: result.evidence || null,
+        explanation: result.explanation || (result.is_correct ? "Your reasoning is logically sound and accurate!" : "Review your solution logic."),
+        intervention: result.is_correct ? null : result.intervention,
+        follow_up_question: result.follow_up_question || null,
+        confidence: typeof result.confidence === 'number' ? result.confidence : 0.95,
+        next_step: result.next_step || null,
+      };
+
+      setAttempts([{
+        ...newAttempt,
+        status: 'analyzed',
+        diagnosis: finalDiagnosis,
+      }]);
+
+      if (finalDiagnosis.is_correct) {
+        setXp(prev => prev + 100);
+        confetti({
+          particleCount: 150,
+          spread: 70,
+          origin: { y: 0.6 },
+          colors: ['#3B82F6', '#8B5CF6', '#10B981']
+        });
+      }
+
+      setStats(prev => {
+        const newTotal = prev.totalAttempts + 1;
+        const prevResolved = Math.round((prev.resolutionRate * prev.totalAttempts) / 100);
+        const newResolved = prevResolved + (finalDiagnosis.is_correct ? 1 : 0);
+        const newRate = Math.round((newResolved / newTotal) * 100);
+
+        const errorMap: Record<string, number> = {};
+        prev.recurringMisconceptions.forEach(m => { errorMap[m.name] = m.count; });
+        if (finalDiagnosis.misconception) {
+          errorMap[finalDiagnosis.misconception] = (errorMap[finalDiagnosis.misconception] || 0) + 1;
+        }
+        const recurring = Object.entries(errorMap)
+          .map(([name, count]) => ({ name, count }))
+          .sort((a, b) => b.count - a.count);
+
+        return {
+          ...prev,
+          totalAttempts: newTotal,
+          resolutionRate: newRate,
+          recurringMisconceptions: recurring,
+        };
+      });
 
       try {
         await supabase.from('attempts').insert([{
@@ -1091,15 +872,17 @@ export const LearningModule: React.FC = () => {
     setMobileTab('editor');
   };
 
+  const filteredChallenges = selectedDomain === 'all' 
+    ? CHALLENGES_CATALOG.filter(c => !c.id.includes('resolution'))
+    : CHALLENGES_CATALOG.filter(c => c.domain === selectedDomain && !c.id.includes('resolution'));
+
   return (
-    <div className="relative flex flex-col h-[100dvh] min-h-[100dvh] w-full bg-[#080c14] text-gray-200 font-sans selection:bg-blue-500/30 overflow-hidden">
-
-
+    <div className="flex flex-col h-[100dvh] min-h-[100dvh] w-full bg-[#0d1117] text-gray-200 font-sans selection:bg-blue-500/30 overflow-hidden">
       <AnimatePresence>
         {!hasStarted && <WelcomeSplash onStart={() => setHasStarted(true)} />}
       </AnimatePresence>
       {/* Top Navbar */}
-      <header className="px-3 sm:px-6 py-2 border-b border-gray-800/80 bg-[#121721]/80 backdrop-blur-md flex flex-wrap sm:flex-nowrap justify-between items-center gap-2 z-20 shadow-md">
+      <header className="px-3 sm:px-6 py-2 border-b border-gray-800/80 bg-[#161b22] flex flex-wrap sm:flex-nowrap justify-between items-center gap-2 z-20 shadow-md">
         <div className="flex items-center gap-2 sm:gap-4">
           <div className="w-8 h-8 sm:w-9 sm:h-9 bg-gradient-to-br from-blue-600 via-indigo-600 to-cyan-500 rounded-lg flex items-center justify-center shadow-lg shadow-blue-900/30 flex-shrink-0">
             <Code2 className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
@@ -1139,10 +922,58 @@ export const LearningModule: React.FC = () => {
             )}
           </div>
 
-          {/* GooeyNav Top Action Navigation */}
-          <div className="flex-shrink-0">
-            <GooeyNav items={gooeyNavItems} initialActiveIndex={-1} />
-          </div>
+          {/* Connect Colab ML Model Button */}
+          <button
+            onClick={() => {
+              setTempModelUrl(customModelUrl);
+              setModelTestStatus(null);
+              setShowModelConfig(true);
+            }}
+            className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs font-semibold transition-all border cursor-pointer flex-shrink-0 ${
+              customModelUrl
+                ? 'bg-emerald-950/60 border-emerald-700/60 text-emerald-300 shadow-sm shadow-emerald-950'
+                : 'bg-indigo-950/40 border-indigo-700/50 text-indigo-300 hover:bg-indigo-900/60 shadow-sm'
+            }`}
+            title="Connect Colab ML Model"
+          >
+            <Cpu className="w-3.5 h-3.5 text-indigo-400" />
+            <span className="hidden md:inline">{customModelUrl ? 'Colab Active' : 'Colab Model'}</span>
+            <span className="md:hidden">Colab</span>
+            <span className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full ${customModelUrl ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
+          </button>
+
+          {/* Model Evaluation Benchmark Button */}
+          <button
+            onClick={() => setShowEvaluation(true)}
+            className="flex items-center gap-1.5 bg-cyan-950/60 hover:bg-cyan-900/80 text-cyan-300 border border-cyan-800/60 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs font-semibold transition-all shadow-sm cursor-pointer flex-shrink-0"
+            title="Model Evaluation Benchmark"
+          >
+            <Cpu className="w-3.5 h-3.5 text-cyan-400" />
+            <span className="hidden md:inline">Model Benchmark</span>
+            <span className="md:hidden">Benchmark</span>
+          </button>
+
+          {/* Learner Analytics Dashboard Button */}
+          <button
+            onClick={() => setShowAnalytics(true)}
+            className="flex items-center gap-1.5 bg-indigo-950/60 hover:bg-indigo-900/80 text-indigo-300 border border-indigo-800/60 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs font-semibold transition-all shadow-sm cursor-pointer flex-shrink-0"
+            title="Learner Model Analytics"
+          >
+            <Activity className="w-3.5 h-3.5 text-indigo-400" />
+            <span className="hidden md:inline">Learner Model</span>
+            <span className="md:hidden">Analytics</span>
+          </button>
+
+          {/* Institutional / Instructor Dashboard Button */}
+          <button
+            onClick={() => setShowInstructor(true)}
+            className="flex items-center gap-1.5 bg-purple-950/60 hover:bg-purple-900/80 text-purple-300 border border-purple-800/60 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs font-semibold transition-all shadow-sm cursor-pointer flex-shrink-0"
+            title="Institutional & Instructor Dashboard"
+          >
+            <GraduationCap className="w-3.5 h-3.5 text-purple-400" />
+            <span className="hidden md:inline">Instructor View</span>
+            <span className="md:hidden">Instructor</span>
+          </button>
         </div>
       </header>
 
@@ -1192,67 +1023,97 @@ export const LearningModule: React.FC = () => {
       <div className="flex flex-1 overflow-hidden min-h-0 relative h-full w-full">
         
         {/* Left Column: Challenge Catalog & Problem Context */}
-        <div className={`w-full lg:w-[320px] xl:w-[360px] h-full flex-col border-r border-gray-800/80 bg-[#12161f] overflow-y-auto ${
+        <div className={`w-full lg:w-[280px] xl:w-[320px] 2xl:w-[360px] h-full flex-col border-r border-gray-800/80 bg-[#12161f] overflow-y-auto flex-shrink-0 ${
           mobileTab === 'problem' ? 'flex flex-1 min-h-full' : 'hidden lg:flex'
         }`}>
-          {/* Domain Filter Tabs */}
+          {/* Mode Switcher: Demo Problems vs Custom Problem */}
           <div className="p-3 border-b border-gray-800/80 bg-[#161b22]">
-            <div className="flex items-center gap-1.5 mb-2 text-xs font-semibold text-gray-400">
-              <Layers className="w-3.5 h-3.5 text-blue-400" />
-              <span>Domain Selector</span>
-            </div>
-            <div className="grid grid-cols-4 gap-1 text-[11px] font-medium">
-              {(['all', 'programming', 'algebra', 'physics'] as const).map(d => (
-                <button
-                  key={d}
-                  onClick={() => setSelectedDomain(d)}
-                  className={`py-1 px-1.5 rounded text-center capitalize transition-colors ${
-                    selectedDomain === d
-                      ? 'bg-blue-600 text-white font-bold'
-                      : 'bg-gray-800/60 hover:bg-gray-700/60 text-gray-300'
-                  }`}
-                >
-                  {d}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Challenge Selector Chips */}
-          <div className="p-3 border-b border-gray-800/80 space-y-1.5">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 block px-1">
-              Select Problem
-            </span>
-            {filteredChallenges.map(c => (
+            <div className="flex rounded-xl bg-gray-900/90 p-1 border border-gray-800 gap-1">
               <button
-                key={c.id}
-                onClick={() => handleSelectChallenge(c)}
-                className={`w-full text-left p-2 rounded-lg text-xs transition-all flex items-center justify-between cursor-pointer ${
-                  challenge.id === c.id || challenge.resolutionChallengeId === c.id
-                    ? 'bg-blue-950/60 border border-blue-700/70 text-blue-200 shadow-sm'
-                    : 'bg-gray-800/30 hover:bg-gray-800/60 text-gray-300 border border-transparent'
+                onClick={() => handleSetProblemMode('demo')}
+                className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                  problemMode === 'demo'
+                    ? 'bg-blue-600 text-white shadow-sm'
+                    : 'text-gray-400 hover:text-gray-200'
                 }`}
               >
-                <div className="truncate pr-2">
-                  <div className="font-semibold truncate">{c.title}</div>
-                  <div className="text-[10px] text-gray-400">{c.concept}</div>
-                </div>
-                <ChevronRight className="w-3.5 h-3.5 text-gray-500 flex-shrink-0" />
+                <Layers className="w-3.5 h-3.5" />
+                <span>Demo Problems</span>
               </button>
-            ))}
+              <button
+                onClick={() => handleSetProblemMode('custom')}
+                className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                  problemMode === 'custom'
+                    ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-sm'
+                    : 'text-gray-400 hover:text-gray-200'
+                }`}
+              >
+                <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                <span>+ Custom Problem</span>
+              </button>
+            </div>
           </div>
 
-          {/* Active Challenge Details */}
-          <div className="p-4 sm:p-5 flex-1 space-y-4 pb-16 flex flex-col justify-between min-h-[350px]">
-            <div className="space-y-4">
-              {challenge.id.includes('resolution') && (
-                <div className="bg-purple-950/40 border border-purple-800/60 text-purple-200 text-xs px-3 py-2 rounded-lg flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-purple-400 flex-shrink-0" />
-                  <span>
-                    <strong>Resolution Assessment Mode</strong>: Testing if your cognitive misconception was genuinely resolved.
-                  </span>
+          {problemMode === 'demo' ? (
+            <>
+              {/* Domain Filter Tabs */}
+              <div className="p-3 border-b border-gray-800/80 bg-[#161b22]">
+                <div className="flex items-center gap-1.5 mb-2 text-xs font-semibold text-gray-400">
+                  <Layers className="w-3.5 h-3.5 text-blue-400" />
+                  <span>Domain Selector</span>
                 </div>
-              )}
+                <div className="grid grid-cols-4 gap-1 text-[11px] font-medium">
+                  {(['all', 'programming', 'algebra', 'physics'] as const).map(d => (
+                    <button
+                      key={d}
+                      onClick={() => handleSelectDomain(d)}
+                      className={`py-1 px-1.5 rounded text-center capitalize transition-colors ${
+                        selectedDomain === d
+                          ? 'bg-blue-600 text-white font-bold'
+                          : 'bg-gray-800/60 hover:bg-gray-700/60 text-gray-300'
+                      }`}
+                    >
+                      {d}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Challenge Selector Chips */}
+              <div className="p-3 border-b border-gray-800/80 space-y-1.5">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 block px-1">
+                  Select Problem
+                </span>
+                {filteredChallenges.map(c => (
+                  <button
+                    key={c.id}
+                    onClick={() => handleSelectChallenge(c)}
+                    className={`w-full text-left p-2 rounded-lg text-xs transition-all flex items-center justify-between cursor-pointer ${
+                      challenge.id === c.id || challenge.resolutionChallengeId === c.id
+                        ? 'bg-blue-950/60 border border-blue-700/70 text-blue-200 shadow-sm'
+                        : 'bg-gray-800/30 hover:bg-gray-800/60 text-gray-300 border border-transparent'
+                    }`}
+                  >
+                    <div className="truncate pr-2">
+                      <div className="font-semibold truncate">{c.title}</div>
+                      <div className="text-[10px] text-gray-400">{c.concept}</div>
+                    </div>
+                    <ChevronRight className="w-3.5 h-3.5 text-gray-500 flex-shrink-0" />
+                  </button>
+                ))}
+              </div>
+
+              {/* Active Challenge Details */}
+              <div className="p-3 sm:p-5 flex-1 space-y-4 pb-16 flex flex-col justify-between min-h-0">
+                <div className="space-y-4">
+                  {challenge.id.includes('resolution') && (
+                    <div className="bg-purple-950/40 border border-purple-800/60 text-purple-200 text-xs px-3 py-2 rounded-lg flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-purple-400 flex-shrink-0" />
+                      <span>
+                        <strong>Resolution Assessment Mode</strong>: Testing if your cognitive misconception was genuinely resolved.
+                      </span>
+                    </div>
+                  )}
 
                   <div>
                     <span className="text-[10px] uppercase font-mono font-bold tracking-wider text-blue-400 bg-blue-950/80 px-2 py-0.5 rounded border border-blue-800/50">
@@ -1281,32 +1142,29 @@ export const LearningModule: React.FC = () => {
                   )}
                 </div>
 
-            {/* Quick jump to editor button on mobile */}
-            <div className="lg:hidden pt-4">
-              <button
-                onClick={() => setMobileTab('editor')}
-                className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-blue-900/40"
-              >
-                <span>Open in Code Editor</span>
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Center Column: Editor, Multimodal Attachment, & Run Controls */}
-        <div className={`flex-1 w-full h-full flex-col min-w-0 bg-[#0b0e14] relative overflow-y-auto ${
-          mobileTab === 'editor' ? 'flex' : 'hidden lg:flex'
-        }`}>
-          <div className="flex-1 p-3 sm:p-5 flex flex-col relative">
-            <div className="bg-[#1e1e1e] border border-gray-700/80 rounded-xl overflow-hidden flex-1 shadow-2xl flex flex-col min-h-[360px]">
-              <div className="px-4 py-2 bg-[#252526] border-b border-gray-700 flex items-center justify-between flex-shrink-0">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-red-500/80"></div>
-                  <div className="w-3 h-3 rounded-full bg-yellow-500/80"></div>
-                  <div className="w-3 h-3 rounded-full bg-green-500/80"></div>
-                  <span className="ml-2 text-xs font-mono text-gray-400">
-                    {challenge.language === 'javascript' ? 'solution.js' : 'solution.py'}
+                {/* Quick jump to editor button on mobile */}
+                <div className="lg:hidden pt-4">
+                  <button
+                    onClick={() => setMobileTab('editor')}
+                    className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-blue-900/40"
+                  >
+                    <span>Open in Code Editor</span>
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            </>
+          ) : (
+            /* Custom Problem Creator Form */
+            <div className="p-4 sm:p-5 flex-1 space-y-4 pb-16 flex flex-col justify-between">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 text-xs font-semibold text-purple-300">
+                    <Sparkles className="w-4 h-4 text-purple-400" />
+                    <span>General-Purpose AI Mode</span>
+                  </div>
+                  <span className="text-[10px] text-gray-400 font-mono bg-purple-950/70 border border-purple-800/40 px-2 py-0.5 rounded-full">
+                    Any Subject
                   </span>
                 </div>
 
@@ -1526,14 +1384,13 @@ export const LearningModule: React.FC = () => {
         </div>
 
         {/* Right Column: AI Assistant Timeline */}
-        <div className={`w-full lg:w-[360px] xl:w-[440px] h-full border-l border-gray-800/80 shadow-2xl z-10 flex-col bg-[#161b22] ${
+        <div className={`w-full lg:w-[300px] xl:w-[350px] 2xl:w-[400px] h-full border-l border-gray-800/80 shadow-2xl z-10 flex-col bg-[#161b22] flex-shrink-0 min-h-0 ${
           mobileTab === 'assistant' ? 'flex flex-1 min-h-full' : 'hidden lg:flex'
         }`}>
           <AIAssistantPanel
             attempts={attempts}
             isAnalyzing={isSubmitting}
             onNextChallenge={handleNextChallenge}
-            domain={challenge.domain}
           />
         </div>
       </div>

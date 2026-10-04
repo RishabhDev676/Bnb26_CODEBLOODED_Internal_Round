@@ -1,28 +1,19 @@
-import React, { useEffect, useRef, useState, useMemo } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AlertCircle, CheckCircle2, Lightbulb, Bot, Terminal, Code2, Volume2, VolumeX, Sparkles } from 'lucide-react';
-<<<<<<< HEAD
-import type { Attempt, DomainType } from '../types';
-=======
 import type { Attempt } from '../types';
->>>>>>> 87061ac441f025915a8dc4c07c46ceba9e505ca1
 import { TypewriterText } from './TypewriterText';
-import ThoughtLine from './ThoughtLine';
-
-import { getDomainThoughtSteps } from '../utils/thoughtSteps';
 
 interface AIAssistantPanelProps {
   attempts: Attempt[];
   isAnalyzing: boolean;
   onNextChallenge?: () => void;
-  domain?: DomainType;
 }
 
 export const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({ 
   attempts, 
   isAnalyzing,
-  onNextChallenge,
-  domain
+  onNextChallenge
 }) => {
   const bottomRef = useRef<HTMLDivElement>(null);
   const [speakingId, setSpeakingId] = useState<string | null>(null);
@@ -55,32 +46,10 @@ export const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
     };
   }, []);
 
-  // Progressive ThoughtLine steps for live pedagogical reasoning
-  const domainSteps = useMemo(() => getDomainThoughtSteps(domain), [domain]);
-  const [activeStepCount, setActiveStepCount] = useState(1);
-
-  useEffect(() => {
-    if (isAnalyzing) {
-      setActiveStepCount(1);
-      const timer1 = setTimeout(() => setActiveStepCount(2), 350);
-      const timer2 = setTimeout(() => setActiveStepCount(3), 750);
-      const timer3 = setTimeout(() => setActiveStepCount(4), 1150);
-      const timer4 = setTimeout(() => setActiveStepCount(5), 1550);
-      return () => {
-        clearTimeout(timer1);
-        clearTimeout(timer2);
-        clearTimeout(timer3);
-        clearTimeout(timer4);
-      };
-    } else {
-      setActiveStepCount(domainSteps.length);
-    }
-  }, [isAnalyzing, domainSteps.length]);
-
   // Auto-scroll to bottom when new attempt comes in
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [attempts, isAnalyzing, activeStepCount]);
+  }, [attempts, isAnalyzing]);
 
   return (
     <div className="h-full flex flex-col bg-[#0d1117] relative">
@@ -150,23 +119,6 @@ export const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
                       : 'bg-red-950/20 border-red-900/40'
                   }`}
                 >
-                  {/* Settled ThoughtLine summarizing the cognitive reasoning process */}
-                  <div className="mb-3.5 pb-2.5 border-b border-white/10">
-                    <ThoughtLine
-                      working={false}
-                      elapsed={attempt.thoughtTime || 1.6}
-                      steps={attempt.thoughtSteps || domainSteps}
-                      doneLabel="Thought for"
-                      glyph="sparkle"
-                      fontSize={12.5}
-                      color={attempt.diagnosis.is_correct ? '#86efac' : '#cbd5e1'}
-                      glyphColor={attempt.diagnosis.is_correct ? '#34d399' : '#38bdf8'}
-                      collapsible={true}
-                      collapseOnSettle={true}
-                      showTimer={true}
-                    />
-                  </div>
-
                   {attempt.diagnosis.is_correct ? (
                     <div className="text-emerald-100">
                       <div className="flex items-center gap-2 mb-3 text-emerald-400 font-semibold">
@@ -299,33 +251,16 @@ export const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
 
         {isAnalyzing && (
           <motion.div 
-            initial={{ opacity: 0, y: 12 }}
+            initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            className="self-start w-full bg-[#161b26]/95 border border-cyan-500/30 rounded-2xl rounded-tl-sm p-4 shadow-xl shadow-cyan-950/40 backdrop-blur-md"
+            className="self-start bg-[#161b22] border border-gray-800 rounded-2xl rounded-tl-sm p-4 flex items-center gap-3 shadow-md"
           >
-            <div className="flex items-center gap-2 mb-3 pb-2.5 border-b border-gray-800/80">
-              <div className="w-5 h-5 rounded-full bg-cyan-950/80 flex items-center justify-center border border-cyan-600/50">
-                <Bot className="w-3 h-3 text-cyan-400" />
-              </div>
-              <span className="text-xs font-semibold text-cyan-300">Pedagogue Diagnosis in Progress</span>
+            <div className="flex gap-1">
+              <span className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
+              <span className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
+              <span className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
             </div>
-            
-            <ThoughtLine
-              working={true}
-              steps={domainSteps.slice(0, activeStepCount)}
-              label="Diagnosing mental model…"
-              glyph="sparkle"
-              fontSize={13.5}
-              breathPeriod={1.4}
-              breathDepth={0.4}
-              shimmer={true}
-              color="#38bdf8"
-              glyphColor="#38bdf8"
-              collapsible={true}
-              collapseOnSettle={false}
-              showTimer={true}
-            />
+            <span className="text-sm text-gray-400 font-medium">Analyzing mental model...</span>
           </motion.div>
         )}
         

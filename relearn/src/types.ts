@@ -8,6 +8,7 @@ export interface Diagnosis {
   follow_up_question?: string | null;
   confidence?: number | null;
   next_step?: string | null;
+  fixed_code?: string | null;
 }
 
 export interface Attempt {

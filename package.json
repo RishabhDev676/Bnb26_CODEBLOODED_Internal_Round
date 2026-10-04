@@ -1,0 +1,13 @@
+{
+  "name": "codeblooded-maharashtra-round",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Root proxy for Re:Learn application",
+  "scripts": {
+    "dev": "npm --prefix relearn run dev",
+    "build": "npm --prefix relearn run build",
+    "preview": "npm --prefix relearn run preview",
+    "lint": "npm --prefix relearn run lint",
+    "install:all": "npm --prefix relearn install --legacy-peer-deps"
+  }
+}
