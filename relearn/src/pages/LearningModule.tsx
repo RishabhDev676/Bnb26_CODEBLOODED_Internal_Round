@@ -593,7 +593,7 @@ export const LearningModule: React.FC = () => {
     : CHALLENGES_CATALOG.filter(c => c.domain === selectedDomain && !c.id.includes('resolution'));
 
   return (
-    <div className="flex flex-col h-screen bg-[#0d1117] text-gray-200 font-sans selection:bg-blue-500/30">
+    <div className="flex flex-col h-[100dvh] min-h-[100dvh] w-full bg-[#0d1117] text-gray-200 font-sans selection:bg-blue-500/30 overflow-hidden">
       <AnimatePresence>
         {!hasStarted && <WelcomeSplash onStart={() => setHasStarted(true)} />}
       </AnimatePresence>
@@ -697,8 +697,8 @@ export const LearningModule: React.FC = () => {
         </div>
       )}
 
-      {/* Responsive View Switcher for Mobile / Tablet / Portrait (Visible on < 1280px) */}
-      <div className="xl:hidden bg-[#161b22] border-b border-gray-800 px-3 py-1.5 flex items-center justify-around gap-2 text-xs font-semibold z-10 flex-shrink-0">
+      {/* Responsive View Switcher for Mobile / Tablet / Portrait (Visible on < 1024px) */}
+      <div className="lg:hidden bg-[#161b22] border-b border-gray-800 px-3 py-1.5 flex items-center justify-around gap-2 text-xs font-semibold z-10 flex-shrink-0">
         <button 
           onClick={() => setMobileTab('problem')}
           className={`flex-1 py-1.5 px-2 rounded-lg flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
@@ -735,8 +735,8 @@ export const LearningModule: React.FC = () => {
       <div className="flex flex-1 overflow-hidden min-h-0 relative h-full w-full">
         
         {/* Left Column: Challenge Catalog & Problem Context */}
-        <div className={`w-full xl:w-[360px] h-full flex-col border-r border-gray-800/80 bg-[#12161f] overflow-y-auto ${
-          mobileTab === 'problem' ? 'flex flex-1 min-h-full' : 'hidden xl:flex'
+        <div className={`w-full lg:w-[320px] xl:w-[360px] h-full flex-col border-r border-gray-800/80 bg-[#12161f] overflow-y-auto ${
+          mobileTab === 'problem' ? 'flex flex-1 min-h-full' : 'hidden lg:flex'
         }`}>
           {/* Domain Filter Tabs */}
           <div className="p-3 border-b border-gray-800/80 bg-[#161b22]">
@@ -825,7 +825,7 @@ export const LearningModule: React.FC = () => {
             </div>
 
             {/* Quick jump to editor button on mobile */}
-            <div className="xl:hidden pt-4">
+            <div className="lg:hidden pt-4">
               <button
                 onClick={() => setMobileTab('editor')}
                 className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-blue-900/40"
@@ -839,7 +839,7 @@ export const LearningModule: React.FC = () => {
 
         {/* Center Column: Editor, Multimodal Attachment, & Run Controls */}
         <div className={`flex-1 w-full h-full flex-col min-w-0 bg-[#0b0e14] relative overflow-y-auto ${
-          mobileTab === 'editor' ? 'flex' : 'hidden xl:flex'
+          mobileTab === 'editor' ? 'flex' : 'hidden lg:flex'
         }`}>
           <div className="flex-1 p-3 sm:p-5 flex flex-col relative">
             <div className="bg-[#1e1e1e] border border-gray-700/80 rounded-xl overflow-hidden flex-1 shadow-2xl flex flex-col min-h-[360px]">
@@ -940,8 +940,8 @@ export const LearningModule: React.FC = () => {
         </div>
 
         {/* Right Column: AI Assistant Timeline */}
-        <div className={`w-full xl:w-[440px] h-full border-l border-gray-800/80 shadow-2xl z-10 flex-col bg-[#161b22] ${
-          mobileTab === 'assistant' ? 'flex flex-1 min-h-full' : 'hidden xl:flex'
+        <div className={`w-full lg:w-[360px] xl:w-[440px] h-full border-l border-gray-800/80 shadow-2xl z-10 flex-col bg-[#161b22] ${
+          mobileTab === 'assistant' ? 'flex flex-1 min-h-full' : 'hidden lg:flex'
         }`}>
           <AIAssistantPanel
             attempts={attempts}
