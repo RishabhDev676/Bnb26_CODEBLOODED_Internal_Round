@@ -12,6 +12,8 @@ export interface Attempt {
   diagnosis: Diagnosis | null;
   status: 'analyzing' | 'analyzed' | 'error';
   imageBase64?: string;
+  thoughtSteps?: string[];
+  thoughtTime?: number;
 }
 
 export interface LearnerModelStats {

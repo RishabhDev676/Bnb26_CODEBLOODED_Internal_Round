@@ -15,6 +15,7 @@ export interface DiagnosisResult {
   misconception: string | null;
   explanation: string | null;
   intervention: string | null;
+  fixed_code?: string | null;
 }
 
 const GEMINI_KEYS = [
@@ -34,8 +35,8 @@ const GEMINI_KEYS = [
 let _keyIndex = 0;
 
 /**
- * Calls Gemini as LAST RESORT when local DB + Colab both fail.
- * Returns null if no API keys are configured.
+ * Universal Pedagogical AI Model Diagnosis
+ * Works for any problem and any code submission independently of domain tree.
  */
 export async function callGeminiLastResort(
   challengeTitle: string,
@@ -47,24 +48,38 @@ export async function callGeminiLastResort(
 ): Promise<DiagnosisResult | null> {
   if (GEMINI_KEYS.length === 0) return null;
 
-  const prompt = `You are an expert pedagogical AI analyzing a student's submission for misconceptions.
-Challenge: "${challengeTitle}"
-Description: ${challengeDescription}
-Language: ${language}
+  const prompt = `You are an expert AI Pedagogue and Computer Science / STEM Diagnostic Model.
+Your task: Analyze the student's submission.
+Context problem (if applicable): "${challengeTitle} — ${challengeDescription}"
 
 Student Submission:
-\`\`\`${language}
+\`\`\`${language || 'text'}
 ${code}
 \`\`\`
-${imageBase64 ? '\n(The student attached a handwritten image. Analyze it for logic errors.)' : ''}
+${imageBase64 ? '\n(Student attached handwritten working/diagram image. Analyze it as well.)' : ''}
 
-Identify any cognitive misconception. If the solution is correct say so.
-Output ONLY valid JSON:
+Rules:
+1. If the submission is NOT valid code, algorithm, or mathematical formula (for example, if it's just a random English sentence, conversational text like "hi", "how are you", or non-technical prose):
+   Set:
+   "is_correct": false,
+   "misconception": "Invalid Submission Format",
+   "explanation": "Please give a proper submission, not just a sentence.",
+   "intervention": "Provide functional code, an algorithm, or a mathematical expression to diagnose."
+
+2. If it IS code or math:
+   - Understand the student's intended algorithm or problem (even if different from the context problem).
+   - Check if the logic is correct.
+   - If incorrect, identify the exact cognitive misconception or bug (e.g. operator precedence, zero-division, off-by-one, type coercion, formula error).
+   - Give a clear explanation of why this mental model is flawed.
+   - Provide a Socratic hint/intervention AND the corrected code in "intervention" or "fixed_code".
+
+Output ONLY a single valid JSON object:
 {
   "is_correct": boolean,
   "misconception": string or null,
-  "explanation": string or null,
-  "intervention": string or null
+  "explanation": string,
+  "intervention": string,
+  "fixed_code": string or null
 }`;
 
   const parts: object[] = [{ text: prompt }];
@@ -73,7 +88,7 @@ Output ONLY valid JSON:
     parts.push({ inlineData: { mimeType: imageMimeType, data: base64Data } });
   }
 
-  const models = ['gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-2.5-flash'];
+  const models = ['gemini-3.5-flash', 'gemini-3.8-flash', 'gemini-flash-latest'];
 
   for (let attempt = 0; attempt < GEMINI_KEYS.length; attempt++) {
     const key = GEMINI_KEYS[_keyIndex % GEMINI_KEYS.length];
@@ -91,7 +106,7 @@ Output ONLY valid JSON:
           }),
         });
         if (res.status === 404) continue;
-        if (res.status === 429) break; // try next key
+        if (res.status === 429) break;
 
         if (!res.ok) {
           const err = await res.json().catch(() => ({}));
@@ -99,13 +114,65 @@ Output ONLY valid JSON:
         }
 
         const data = await res.json();
-        const rawText: string = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+        let rawText: string = data?.candidates?.[0]?.content?.parts?.[0]?.text;
         if (!rawText) throw new Error('Empty Gemini response');
+
+        // Clean any accidental markdown backticks
+        rawText = rawText.replace(/```json\s*/i, '').replace(/```\s*$/, '').trim();
 
         return JSON.parse(rawText) as DiagnosisResult;
       } catch {
         // try next model / key
       }
+    }
+  }
+  return null;
+}
+
+/**
+ * Optical Character Recognition (OCR) for attached diagrams and handwritten notes.
+ * Transcribes handwritten or screenshot code into plain text.
+ */
+export async function extractCodeFromImage(
+  imageBase64: string,
+  imageMimeType: string = 'image/jpeg'
+): Promise<string | null> {
+  if (GEMINI_KEYS.length === 0) return null;
+
+  const prompt = `Transcribe all computer code, algorithms, or mathematical formulas visible in this image verbatim.
+Return ONLY the raw executable code or mathematical text.
+Do not include any conversational greeting, explanations, or commentary.`;
+
+  const base64Data = imageBase64.includes(',') ? imageBase64.split(',')[1] : imageBase64;
+  const parts: object[] = [
+    { text: prompt },
+    { inlineData: { mimeType: imageMimeType, data: base64Data } }
+  ];
+
+  for (let attempt = 0; attempt < GEMINI_KEYS.length; attempt++) {
+    const key = GEMINI_KEYS[_keyIndex % GEMINI_KEYS.length];
+    _keyIndex++;
+
+    try {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${key}`;
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts }],
+          generationConfig: { temperature: 0.1 }
+        })
+      });
+      if (!res.ok) continue;
+
+      const data = await res.json();
+      let text: string = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (text) {
+        text = text.replace(/```[a-zA-Z]*\n/i, '').replace(/```$/g, '').trim();
+        return text;
+      }
+    } catch {
+      // try next key
     }
   }
   return null;
