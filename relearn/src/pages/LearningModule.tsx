@@ -7,7 +7,7 @@ import { InstitutionalDashboard } from '../components/InstitutionalDashboard';
 import { supabase } from '../lib/supabase';
 import { 
   Play, Key, AlertTriangle, Activity, Code2, Image, 
-  X, Cpu, Layers, Sparkles, ChevronRight, HelpCircle, GraduationCap
+  X, Cpu, Layers, Sparkles, ChevronRight, HelpCircle, GraduationCap, BrainCircuit
 } from 'lucide-react';
 import { diagnoseWithGemini, geminiKeyManager } from '../services/geminiService';
 import { CHALLENGES_CATALOG } from '../data/misconceptionsDataset';
@@ -306,6 +306,7 @@ export const LearningModule: React.FC = () => {
   const [rotationMessage, setRotationMessage] = useState<string | null>(null);
   const [xp, setXp] = useState(0);
   const [hasStarted, setHasStarted] = useState(false);
+  const [mobileTab, setMobileTab] = useState<'problem' | 'editor' | 'assistant'>('editor');
 
   // Custom Colab ML Model Endpoint State
   const [customModelUrl, setCustomModelUrl] = useState<string>(() => localStorage.getItem('relearn_model_url') || '');
@@ -347,6 +348,7 @@ export const LearningModule: React.FC = () => {
     setAttempts([]);
     setAttachedImage(null);
     setRotationMessage(null);
+    setMobileTab('editor');
   };
 
   // Dynamic Learner Analytics update
@@ -400,6 +402,7 @@ export const LearningModule: React.FC = () => {
   const handleSubmit = async () => {
     setIsSubmitting(true);
     setRotationMessage(null);
+    setMobileTab('assistant');
 
     const newAttempt: Attempt = {
       id: Date.now().toString(),
@@ -570,6 +573,7 @@ export const LearningModule: React.FC = () => {
         setAttempts([]);
         setAttachedImage(null);
         setRotationMessage(null);
+        setMobileTab('editor');
         return;
       }
     }
@@ -581,6 +585,7 @@ export const LearningModule: React.FC = () => {
     setCode(nextChallenge.initialCode);
     setAttempts([]);
     setAttachedImage(null);
+    setMobileTab('editor');
   };
 
   const filteredChallenges = selectedDomain === 'all' 
@@ -593,38 +598,38 @@ export const LearningModule: React.FC = () => {
         {!hasStarted && <WelcomeSplash onStart={() => setHasStarted(true)} />}
       </AnimatePresence>
       {/* Top Navbar */}
-      <header className="px-6 py-2.5 border-b border-gray-800/80 bg-[#161b22] flex justify-between items-center z-20 shadow-md">
-        <div className="flex items-center gap-4">
-          <div className="w-9 h-9 bg-gradient-to-br from-blue-600 via-indigo-600 to-cyan-500 rounded-lg flex items-center justify-center shadow-lg shadow-blue-900/30">
-            <Code2 className="w-5 h-5 text-white" />
+      <header className="px-3 sm:px-6 py-2 border-b border-gray-800/80 bg-[#161b22] flex flex-wrap sm:flex-nowrap justify-between items-center gap-2 z-20 shadow-md">
+        <div className="flex items-center gap-2 sm:gap-4">
+          <div className="w-8 h-8 sm:w-9 sm:h-9 bg-gradient-to-br from-blue-600 via-indigo-600 to-cyan-500 rounded-lg flex items-center justify-center shadow-lg shadow-blue-900/30 flex-shrink-0">
+            <Code2 className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
           </div>
           <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-lg font-bold tracking-tight text-gray-100">Re:Learn</h1>
-              <span className="text-[10px] uppercase tracking-wider bg-blue-950 text-blue-300 border border-blue-800/80 px-2 py-0.5 rounded-full font-bold">
-                Adaptive Multimodal
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <h1 className="text-base sm:text-lg font-bold tracking-tight text-gray-100">Re:Learn</h1>
+              <span className="text-[9px] sm:text-[10px] uppercase tracking-wider bg-blue-950 text-blue-300 border border-blue-800/80 px-1.5 sm:px-2 py-0.5 rounded-full font-bold">
+                Adaptive
               </span>
             </div>
-            <p className="text-[11px] text-gray-400">
+            <p className="text-[10px] sm:text-[11px] text-gray-400 hidden sm:block">
               Cognitive Misconception Diagnosis & Resolution Engine
             </p>
           </div>
         </div>
 
         {/* Action Controls & Resilience Status */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-1.5 sm:gap-2.5 overflow-x-auto py-1 max-w-full">
           {/* XP Bar */}
-          <div className="flex items-center gap-2 bg-gradient-to-r from-amber-950 to-orange-950 border border-amber-800/50 px-3 py-1.5 rounded-lg shadow-[0_0_10px_rgba(217,119,6,0.3)]">
-            <Sparkles className="w-4 h-4 text-amber-400" />
-            <span className="text-amber-300 font-bold text-sm tracking-wide">{xp} XP</span>
+          <div className="flex items-center gap-1.5 bg-gradient-to-r from-amber-950 to-orange-950 border border-amber-800/50 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg shadow-[0_0_10px_rgba(217,119,6,0.3)] flex-shrink-0">
+            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+            <span className="text-amber-300 font-bold text-xs sm:text-sm tracking-wide">{xp} XP</span>
           </div>
 
           {keyCount > 0 && (
-            <div className="flex items-center gap-2 text-xs bg-[#0b0f15] border border-gray-700/80 px-3 py-1.5 rounded-lg text-gray-300">
+            <div className="flex items-center gap-1.5 text-xs bg-[#0b0f15] border border-gray-700/80 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-gray-300 flex-shrink-0">
               <Key className="w-3.5 h-3.5 text-blue-400" />
-              <span>Pool: <strong>{keyCount} Keys</strong></span>
-              <span className="text-emerald-400 font-mono text-[11px] bg-emerald-950/60 border border-emerald-800/50 px-1.5 py-0.2 rounded">
-                Active #{currentKeyIndex + 1}
+              <span className="hidden md:inline">Pool: <strong>{keyCount} Keys</strong></span>
+              <span className="text-emerald-400 font-mono text-[10px] sm:text-[11px] bg-emerald-950/60 border border-emerald-800/50 px-1.5 py-0.2 rounded">
+                #{currentKeyIndex + 1}
               </span>
             </div>
           )}
@@ -636,59 +641,103 @@ export const LearningModule: React.FC = () => {
               setModelTestStatus(null);
               setShowModelConfig(true);
             }}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border cursor-pointer ${
+            className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs font-semibold transition-all border cursor-pointer flex-shrink-0 ${
               customModelUrl
                 ? 'bg-emerald-950/60 border-emerald-700/60 text-emerald-300 shadow-sm shadow-emerald-950'
                 : 'bg-indigo-950/40 border-indigo-700/50 text-indigo-300 hover:bg-indigo-900/60 shadow-sm'
             }`}
+            title="Connect Colab ML Model"
           >
             <Cpu className="w-3.5 h-3.5 text-indigo-400" />
-            <span>{customModelUrl ? 'Colab Model Active' : 'Connect Colab Model'}</span>
-            <span className={`w-2 h-2 rounded-full ${customModelUrl ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
+            <span className="hidden md:inline">{customModelUrl ? 'Colab Active' : 'Colab Model'}</span>
+            <span className="md:hidden">Colab</span>
+            <span className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full ${customModelUrl ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
           </button>
 
           {/* Model Evaluation Benchmark Button */}
           <button
             onClick={() => setShowEvaluation(true)}
-            className="flex items-center gap-1.5 bg-cyan-950/60 hover:bg-cyan-900/80 text-cyan-300 border border-cyan-800/60 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all shadow-sm cursor-pointer"
+            className="flex items-center gap-1.5 bg-cyan-950/60 hover:bg-cyan-900/80 text-cyan-300 border border-cyan-800/60 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs font-semibold transition-all shadow-sm cursor-pointer flex-shrink-0"
+            title="Model Evaluation Benchmark"
           >
-            <Cpu className="w-4 h-4 text-cyan-400" />
-            <span>Model Benchmark</span>
+            <Cpu className="w-3.5 h-3.5 text-cyan-400" />
+            <span className="hidden md:inline">Model Benchmark</span>
+            <span className="md:hidden">Benchmark</span>
           </button>
 
           {/* Learner Analytics Dashboard Button */}
           <button
             onClick={() => setShowAnalytics(true)}
-            className="flex items-center gap-1.5 bg-indigo-950/60 hover:bg-indigo-900/80 text-indigo-300 border border-indigo-800/60 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all shadow-sm cursor-pointer"
+            className="flex items-center gap-1.5 bg-indigo-950/60 hover:bg-indigo-900/80 text-indigo-300 border border-indigo-800/60 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs font-semibold transition-all shadow-sm cursor-pointer flex-shrink-0"
+            title="Learner Model Analytics"
           >
-            <Activity className="w-4 h-4 text-indigo-400" />
-            <span>Learner Model</span>
+            <Activity className="w-3.5 h-3.5 text-indigo-400" />
+            <span className="hidden md:inline">Learner Model</span>
+            <span className="md:hidden">Analytics</span>
           </button>
 
           {/* Institutional / Instructor Dashboard Button */}
           <button
             onClick={() => setShowInstructor(true)}
-            className="flex items-center gap-1.5 bg-purple-950/60 hover:bg-purple-900/80 text-purple-300 border border-purple-800/60 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all shadow-sm cursor-pointer"
+            className="flex items-center gap-1.5 bg-purple-950/60 hover:bg-purple-900/80 text-purple-300 border border-purple-800/60 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs font-semibold transition-all shadow-sm cursor-pointer flex-shrink-0"
+            title="Institutional & Instructor Dashboard"
           >
-            <GraduationCap className="w-4 h-4 text-purple-400" />
-            <span>Instructor View</span>
+            <GraduationCap className="w-3.5 h-3.5 text-purple-400" />
+            <span className="hidden md:inline">Instructor View</span>
+            <span className="md:hidden">Instructor</span>
           </button>
         </div>
       </header>
 
       {/* Rotation Notice Banner */}
       {rotationMessage && (
-        <div className="bg-amber-950/40 border-b border-amber-700/50 px-6 py-2 flex items-center gap-2 text-amber-200 text-xs animate-fadeIn">
+        <div className="bg-amber-950/40 border-b border-amber-700/50 px-4 sm:px-6 py-2 flex items-center gap-2 text-amber-200 text-xs animate-fadeIn flex-shrink-0">
           <AlertTriangle className="w-4 h-4 text-amber-400 flex-shrink-0" />
           <span>{rotationMessage}</span>
         </div>
       )}
 
+      {/* Responsive View Switcher for Mobile / Tablet / Portrait (Visible on < 1280px) */}
+      <div className="xl:hidden bg-[#161b22] border-b border-gray-800 px-3 py-1.5 flex items-center justify-around gap-2 text-xs font-semibold z-10 flex-shrink-0">
+        <button 
+          onClick={() => setMobileTab('problem')}
+          className={`flex-1 py-1.5 px-2 rounded-lg flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
+            mobileTab === 'problem' ? 'bg-blue-600 text-white shadow-sm' : 'bg-gray-800/50 hover:bg-gray-800 text-gray-400'
+          }`}
+        >
+          <HelpCircle className="w-3.5 h-3.5" />
+          <span>1. Problem</span>
+        </button>
+        <button 
+          onClick={() => setMobileTab('editor')}
+          className={`flex-1 py-1.5 px-2 rounded-lg flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
+            mobileTab === 'editor' ? 'bg-blue-600 text-white shadow-sm' : 'bg-gray-800/50 hover:bg-gray-800 text-gray-400'
+          }`}
+        >
+          <Code2 className="w-3.5 h-3.5" />
+          <span>2. Code Editor</span>
+        </button>
+        <button 
+          onClick={() => setMobileTab('assistant')}
+          className={`flex-1 py-1.5 px-2 rounded-lg flex items-center justify-center gap-1.5 transition-colors cursor-pointer relative ${
+            mobileTab === 'assistant' ? 'bg-blue-600 text-white shadow-sm' : 'bg-gray-800/50 hover:bg-gray-800 text-gray-400'
+          }`}
+        >
+          <BrainCircuit className="w-3.5 h-3.5 text-cyan-300" />
+          <span>3. AI Pedagogue</span>
+          {attempts.length > 0 && (
+            <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse ml-0.5" />
+          )}
+        </button>
+      </div>
+
       {/* Main Multi-Pane Workspace */}
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden min-h-0 relative">
         
         {/* Left Column: Challenge Catalog & Problem Context */}
-        <div className="w-[360px] flex flex-col border-r border-gray-800/80 bg-[#12161f] overflow-y-auto">
+        <div className={`w-full xl:w-[360px] flex-col border-r border-gray-800/80 bg-[#12161f] overflow-y-auto flex-shrink-0 ${
+          mobileTab === 'problem' ? 'flex flex-1' : 'hidden xl:flex'
+        }`}>
           {/* Domain Filter Tabs */}
           <div className="p-3 border-b border-gray-800/80 bg-[#161b22]">
             <div className="flex items-center gap-1.5 mb-2 text-xs font-semibold text-gray-400">
@@ -721,7 +770,7 @@ export const LearningModule: React.FC = () => {
               <button
                 key={c.id}
                 onClick={() => handleSelectChallenge(c)}
-                className={`w-full text-left p-2 rounded-lg text-xs transition-all flex items-center justify-between ${
+                className={`w-full text-left p-2 rounded-lg text-xs transition-all flex items-center justify-between cursor-pointer ${
                   challenge.id === c.id || challenge.resolutionChallengeId === c.id
                     ? 'bg-blue-950/60 border border-blue-700/70 text-blue-200 shadow-sm'
                     : 'bg-gray-800/30 hover:bg-gray-800/60 text-gray-300 border border-transparent'
@@ -737,7 +786,7 @@ export const LearningModule: React.FC = () => {
           </div>
 
           {/* Active Challenge Details */}
-          <div className="p-5 flex-1 space-y-4">
+          <div className="p-4 sm:p-5 flex-1 space-y-4">
             {challenge.id.includes('resolution') && (
               <div className="bg-purple-950/40 border border-purple-800/60 text-purple-200 text-xs px-3 py-2 rounded-lg flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-purple-400 flex-shrink-0" />
@@ -751,7 +800,7 @@ export const LearningModule: React.FC = () => {
               <span className="text-[10px] uppercase font-mono font-bold tracking-wider text-blue-400 bg-blue-950/80 px-2 py-0.5 rounded border border-blue-800/50">
                 {challenge.concept}
               </span>
-              <h2 className="text-xl font-bold text-gray-100 mt-2 mb-2 leading-tight">
+              <h2 className="text-lg sm:text-xl font-bold text-gray-100 mt-2 mb-2 leading-tight">
                 {challenge.title}
               </h2>
               <div className="text-gray-300 text-sm leading-relaxed bg-gray-800/40 p-3.5 rounded-lg border border-gray-700/50">
@@ -772,14 +821,27 @@ export const LearningModule: React.FC = () => {
                 </ul>
               </div>
             )}
+
+            {/* Quick jump to editor button on mobile */}
+            <div className="xl:hidden pt-2">
+              <button
+                onClick={() => setMobileTab('editor')}
+                className="w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-2 cursor-pointer shadow-md"
+              >
+                <span>Continue to Code Editor</span>
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         </div>
 
         {/* Center Column: Editor, Multimodal Attachment, & Run Controls */}
-        <div className="flex-1 flex flex-col min-w-0 bg-[#0b0e14] relative">
-          <div className="flex-1 p-5 flex flex-col relative">
-            <div className="bg-[#1e1e1e] border border-gray-700/80 rounded-xl overflow-hidden flex-1 shadow-2xl flex flex-col">
-              <div className="px-4 py-2 bg-[#252526] border-b border-gray-700 flex items-center justify-between">
+        <div className={`flex-1 flex-col min-w-0 bg-[#0b0e14] relative overflow-y-auto ${
+          mobileTab === 'editor' ? 'flex' : 'hidden xl:flex'
+        }`}>
+          <div className="flex-1 p-3 sm:p-5 flex flex-col relative">
+            <div className="bg-[#1e1e1e] border border-gray-700/80 rounded-xl overflow-hidden flex-1 shadow-2xl flex flex-col min-h-[360px]">
+              <div className="px-4 py-2 bg-[#252526] border-b border-gray-700 flex items-center justify-between flex-shrink-0">
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-full bg-red-500/80"></div>
                   <div className="w-3 h-3 rounded-full bg-yellow-500/80"></div>
@@ -809,13 +871,13 @@ export const LearningModule: React.FC = () => {
                   <img
                     src={attachedImage}
                     alt="Handwritten work preview"
-                    className="w-14 h-14 object-cover rounded-lg border border-gray-700 shadow-sm"
+                    className="w-12 h-12 sm:w-14 sm:h-14 object-cover rounded-lg border border-gray-700 shadow-sm"
                   />
                   <div>
                     <span className="text-xs font-semibold text-cyan-300 block">
-                      ðŸ“· Multimodal Handwritten Work Attached
+                      📷 Multimodal Handwritten Work Attached
                     </span>
-                    <span className="text-[11px] text-gray-400">
+                    <span className="text-[10px] sm:text-[11px] text-gray-400">
                       Gemini will analyze your diagram / algebraic steps alongside code
                     </span>
                   </div>
@@ -831,7 +893,7 @@ export const LearningModule: React.FC = () => {
             )}
 
             {/* Run Bar & Multimodal Attach Button */}
-            <div className="mt-4 flex items-center justify-between">
+            <div className="mt-3 sm:mt-4 flex flex-wrap gap-2 items-center justify-between">
               <div className="flex items-center gap-2">
                 <input
                   type="file"
@@ -846,27 +908,28 @@ export const LearningModule: React.FC = () => {
                   title="Attach handwritten working or diagram for multimodal diagnosis"
                 >
                   <Image className="w-4 h-4 text-cyan-400" />
-                  <span>Attach Work / Diagram</span>
+                  <span className="hidden sm:inline">Attach Work / Diagram</span>
+                  <span className="sm:hidden">Attach Diagram</span>
                 </button>
-                <span className="text-xs text-gray-500 hidden sm:inline">
-                  Supports handwritten math, formulas, & physics diagrams
+                <span className="text-xs text-gray-500 hidden md:inline">
+                  Supports handwritten math & diagrams
                 </span>
               </div>
 
               <button
                 onClick={handleSubmit}
                 disabled={isSubmitting}
-                className="group relative overflow-hidden bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 disabled:opacity-50 text-white font-semibold py-2.5 px-7 rounded-xl transition-all shadow-lg shadow-blue-900/30 flex items-center gap-2.5 cursor-pointer"
+                className="group relative overflow-hidden bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 disabled:opacity-50 text-white font-semibold py-2 sm:py-2.5 px-5 sm:px-7 rounded-xl transition-all shadow-lg shadow-blue-900/30 flex items-center gap-2 cursor-pointer flex-shrink-0"
               >
                 {isSubmitting ? (
                   <>
                     <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                    <span className="text-sm">Diagnosing Mental Model...</span>
+                    <span className="text-xs sm:text-sm">Diagnosing...</span>
                   </>
                 ) : (
                   <>
-                    <Play className="w-4 h-4 fill-current" />
-                    <span className="text-sm">Submit for Diagnosis</span>
+                    <Play className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-current" />
+                    <span className="text-xs sm:text-sm">Submit for Diagnosis</span>
                   </>
                 )}
               </button>
@@ -875,7 +938,9 @@ export const LearningModule: React.FC = () => {
         </div>
 
         {/* Right Column: AI Assistant Timeline */}
-        <div className="w-[440px] border-l border-gray-800/80 shadow-2xl z-10 flex flex-col bg-[#161b22]">
+        <div className={`w-full xl:w-[440px] border-l border-gray-800/80 shadow-2xl z-10 flex-col bg-[#161b22] flex-shrink-0 ${
+          mobileTab === 'assistant' ? 'flex flex-1' : 'hidden xl:flex'
+        }`}>
           <AIAssistantPanel
             attempts={attempts}
             isAnalyzing={isSubmitting}
