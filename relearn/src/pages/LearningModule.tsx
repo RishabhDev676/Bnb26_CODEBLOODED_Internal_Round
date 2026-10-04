@@ -732,11 +732,11 @@ export const LearningModule: React.FC = () => {
       </div>
 
       {/* Main Multi-Pane Workspace */}
-      <div className="flex flex-1 overflow-hidden min-h-0 relative">
+      <div className="flex flex-1 overflow-hidden min-h-0 relative h-full w-full">
         
         {/* Left Column: Challenge Catalog & Problem Context */}
-        <div className={`w-full xl:w-[360px] flex-col border-r border-gray-800/80 bg-[#12161f] overflow-y-auto flex-shrink-0 ${
-          mobileTab === 'problem' ? 'flex flex-1' : 'hidden xl:flex'
+        <div className={`w-full xl:w-[360px] h-full flex-col border-r border-gray-800/80 bg-[#12161f] overflow-y-auto ${
+          mobileTab === 'problem' ? 'flex flex-1 min-h-full' : 'hidden xl:flex'
         }`}>
           {/* Domain Filter Tabs */}
           <div className="p-3 border-b border-gray-800/80 bg-[#161b22]">
@@ -786,49 +786,51 @@ export const LearningModule: React.FC = () => {
           </div>
 
           {/* Active Challenge Details */}
-          <div className="p-4 sm:p-5 flex-1 space-y-4">
-            {challenge.id.includes('resolution') && (
-              <div className="bg-purple-950/40 border border-purple-800/60 text-purple-200 text-xs px-3 py-2 rounded-lg flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-purple-400 flex-shrink-0" />
-                <span>
-                  <strong>Resolution Assessment Mode</strong>: Testing if your cognitive misconception was genuinely resolved.
-                </span>
-              </div>
-            )}
+          <div className="p-4 sm:p-5 flex-1 space-y-4 pb-16 flex flex-col justify-between min-h-[350px]">
+            <div className="space-y-4">
+              {challenge.id.includes('resolution') && (
+                <div className="bg-purple-950/40 border border-purple-800/60 text-purple-200 text-xs px-3 py-2 rounded-lg flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-purple-400 flex-shrink-0" />
+                  <span>
+                    <strong>Resolution Assessment Mode</strong>: Testing if your cognitive misconception was genuinely resolved.
+                  </span>
+                </div>
+              )}
 
-            <div>
-              <span className="text-[10px] uppercase font-mono font-bold tracking-wider text-blue-400 bg-blue-950/80 px-2 py-0.5 rounded border border-blue-800/50">
-                {challenge.concept}
-              </span>
-              <h2 className="text-lg sm:text-xl font-bold text-gray-100 mt-2 mb-2 leading-tight">
-                {challenge.title}
-              </h2>
-              <div className="text-gray-300 text-sm leading-relaxed bg-gray-800/40 p-3.5 rounded-lg border border-gray-700/50">
-                {challenge.description}
+              <div>
+                <span className="text-[10px] uppercase font-mono font-bold tracking-wider text-blue-400 bg-blue-950/80 px-2 py-0.5 rounded border border-blue-800/50">
+                  {challenge.concept}
+                </span>
+                <h2 className="text-lg sm:text-xl font-bold text-gray-100 mt-2 mb-2 leading-tight">
+                  {challenge.title}
+                </h2>
+                <div className="text-gray-300 text-sm leading-relaxed bg-gray-800/40 p-3.5 rounded-lg border border-gray-700/50">
+                  {challenge.description}
+                </div>
               </div>
+
+              {challenge.hints && challenge.hints.length > 0 && (
+                <div className="bg-gray-800/20 p-3 rounded-lg border border-gray-700/40 text-xs text-gray-400 space-y-1.5">
+                  <div className="flex items-center gap-1.5 text-gray-300 font-semibold mb-1">
+                    <HelpCircle className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Guidance</span>
+                  </div>
+                  <ul className="list-disc list-inside space-y-1 text-gray-300">
+                    {challenge.hints.map((hint, i) => (
+                      <li key={i}>{hint}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
 
-            {challenge.hints && challenge.hints.length > 0 && (
-              <div className="bg-gray-800/20 p-3 rounded-lg border border-gray-700/40 text-xs text-gray-400 space-y-1.5">
-                <div className="flex items-center gap-1.5 text-gray-300 font-semibold mb-1">
-                  <HelpCircle className="w-3.5 h-3.5 text-amber-400" />
-                  <span>Guidance</span>
-                </div>
-                <ul className="list-disc list-inside space-y-1 text-gray-300">
-                  {challenge.hints.map((hint, i) => (
-                    <li key={i}>{hint}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
             {/* Quick jump to editor button on mobile */}
-            <div className="xl:hidden pt-2">
+            <div className="xl:hidden pt-4">
               <button
                 onClick={() => setMobileTab('editor')}
-                className="w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-2 cursor-pointer shadow-md"
+                className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-blue-900/40"
               >
-                <span>Continue to Code Editor</span>
+                <span>Open in Code Editor</span>
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>
@@ -836,7 +838,7 @@ export const LearningModule: React.FC = () => {
         </div>
 
         {/* Center Column: Editor, Multimodal Attachment, & Run Controls */}
-        <div className={`flex-1 flex-col min-w-0 bg-[#0b0e14] relative overflow-y-auto ${
+        <div className={`flex-1 w-full h-full flex-col min-w-0 bg-[#0b0e14] relative overflow-y-auto ${
           mobileTab === 'editor' ? 'flex' : 'hidden xl:flex'
         }`}>
           <div className="flex-1 p-3 sm:p-5 flex flex-col relative">
@@ -938,8 +940,8 @@ export const LearningModule: React.FC = () => {
         </div>
 
         {/* Right Column: AI Assistant Timeline */}
-        <div className={`w-full xl:w-[440px] border-l border-gray-800/80 shadow-2xl z-10 flex-col bg-[#161b22] flex-shrink-0 ${
-          mobileTab === 'assistant' ? 'flex flex-1' : 'hidden xl:flex'
+        <div className={`w-full xl:w-[440px] h-full border-l border-gray-800/80 shadow-2xl z-10 flex-col bg-[#161b22] ${
+          mobileTab === 'assistant' ? 'flex flex-1 min-h-full' : 'hidden xl:flex'
         }`}>
           <AIAssistantPanel
             attempts={attempts}
