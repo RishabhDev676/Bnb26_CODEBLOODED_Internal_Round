@@ -760,14 +760,16 @@ export const LearningModule: React.FC = () => {
             </div>
 
             {challenge.hints && challenge.hints.length > 0 && (
-              <div className="bg-gray-800/20 p-3 rounded-lg border border-gray-700/40 text-xs text-gray-400 space-y-1">
+              <div className="bg-gray-800/20 p-3 rounded-lg border border-gray-700/40 text-xs text-gray-400 space-y-1.5">
                 <div className="flex items-center gap-1.5 text-gray-300 font-semibold mb-1">
                   <HelpCircle className="w-3.5 h-3.5 text-amber-400" />
                   <span>Guidance</span>
                 </div>
-                {challenge.hints.map((hint, i) => (
-                  <p key={i}>â€¢ {hint}</p>
-                ))}
+                <ul className="list-disc list-inside space-y-1 text-gray-300">
+                  {challenge.hints.map((hint, i) => (
+                    <li key={i}>{hint}</li>
+                  ))}
+                </ul>
               </div>
             )}
           </div>
